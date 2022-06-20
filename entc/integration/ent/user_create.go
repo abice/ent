@@ -43,6 +43,20 @@ func (uc *UserCreate) SetNillableOptionalInt(i *int) *UserCreate {
 	return uc
 }
 
+// SetUniqueInt sets the "unique_int" field.
+func (uc *UserCreate) SetUniqueInt(i int) *UserCreate {
+	uc.mutation.SetUniqueInt(i)
+	return uc
+}
+
+// SetNillableUniqueInt sets the "unique_int" field if the given value is not nil.
+func (uc *UserCreate) SetNillableUniqueInt(i *int) *UserCreate {
+	if i != nil {
+		uc.SetUniqueInt(*i)
+	}
+	return uc
+}
+
 // SetAge sets the "age" field.
 func (uc *UserCreate) SetAge(i int) *UserCreate {
 	uc.mutation.SetAge(i)
@@ -450,6 +464,11 @@ func (uc *UserCreate) check() error {
 			return &ValidationError{Name: "optional_int", err: fmt.Errorf(`ent: validator failed for field "User.optional_int": %w`, err)}
 		}
 	}
+	if v, ok := uc.mutation.UniqueInt(); ok {
+		if err := user.UniqueIntValidator(v); err != nil {
+			return &ValidationError{Name: "unique_int", err: fmt.Errorf(`ent: validator failed for field "User.unique_int": %w`, err)}
+		}
+	}
 	if _, ok := uc.mutation.Age(); !ok {
 		return &ValidationError{Name: "age", err: errors.New(`ent: missing required field "User.age"`)}
 	}
@@ -510,6 +529,14 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 			Column: user.FieldOptionalInt,
 		})
 		_node.OptionalInt = value
+	}
+	if value, ok := uc.mutation.UniqueInt(); ok {
+		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
+			Type:   field.TypeInt,
+			Value:  value,
+			Column: user.FieldUniqueInt,
+		})
+		_node.UniqueInt = value
 	}
 	if value, ok := uc.mutation.Age(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
@@ -880,6 +907,30 @@ func (u *UserUpsert) ClearOptionalInt() *UserUpsert {
 	return u
 }
 
+// SetUniqueInt sets the "unique_int" field.
+func (u *UserUpsert) SetUniqueInt(v int) *UserUpsert {
+	u.Set(user.FieldUniqueInt, v)
+	return u
+}
+
+// UpdateUniqueInt sets the "unique_int" field to the value that was provided on create.
+func (u *UserUpsert) UpdateUniqueInt() *UserUpsert {
+	u.SetExcluded(user.FieldUniqueInt)
+	return u
+}
+
+// AddUniqueInt adds v to the "unique_int" field.
+func (u *UserUpsert) AddUniqueInt(v int) *UserUpsert {
+	u.Add(user.FieldUniqueInt, v)
+	return u
+}
+
+// ClearUniqueInt clears the value of the "unique_int" field.
+func (u *UserUpsert) ClearUniqueInt() *UserUpsert {
+	u.SetNull(user.FieldUniqueInt)
+	return u
+}
+
 // SetAge sets the "age" field.
 func (u *UserUpsert) SetAge(v int) *UserUpsert {
 	u.Set(user.FieldAge, v)
@@ -1103,6 +1154,34 @@ func (u *UserUpsertOne) UpdateOptionalInt() *UserUpsertOne {
 func (u *UserUpsertOne) ClearOptionalInt() *UserUpsertOne {
 	return u.Update(func(s *UserUpsert) {
 		s.ClearOptionalInt()
+	})
+}
+
+// SetUniqueInt sets the "unique_int" field.
+func (u *UserUpsertOne) SetUniqueInt(v int) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetUniqueInt(v)
+	})
+}
+
+// AddUniqueInt adds v to the "unique_int" field.
+func (u *UserUpsertOne) AddUniqueInt(v int) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.AddUniqueInt(v)
+	})
+}
+
+// UpdateUniqueInt sets the "unique_int" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateUniqueInt() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateUniqueInt()
+	})
+}
+
+// ClearUniqueInt clears the value of the "unique_int" field.
+func (u *UserUpsertOne) ClearUniqueInt() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearUniqueInt()
 	})
 }
 
@@ -1517,6 +1596,34 @@ func (u *UserUpsertBulk) UpdateOptionalInt() *UserUpsertBulk {
 func (u *UserUpsertBulk) ClearOptionalInt() *UserUpsertBulk {
 	return u.Update(func(s *UserUpsert) {
 		s.ClearOptionalInt()
+	})
+}
+
+// SetUniqueInt sets the "unique_int" field.
+func (u *UserUpsertBulk) SetUniqueInt(v int) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetUniqueInt(v)
+	})
+}
+
+// AddUniqueInt adds v to the "unique_int" field.
+func (u *UserUpsertBulk) AddUniqueInt(v int) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.AddUniqueInt(v)
+	})
+}
+
+// UpdateUniqueInt sets the "unique_int" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateUniqueInt() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateUniqueInt()
+	})
+}
+
+// ClearUniqueInt clears the value of the "unique_int" field.
+func (u *UserUpsertBulk) ClearUniqueInt() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearUniqueInt()
 	})
 }
 

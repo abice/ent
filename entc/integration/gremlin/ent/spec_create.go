@@ -12,7 +12,7 @@ import (
 
 	"entgo.io/ent/dialect/gremlin"
 	"entgo.io/ent/dialect/gremlin/graph/dsl"
-	"entgo.io/ent/dialect/gremlin/graph/dsl/g"
+	"entgo.io/ent/dialect/gremlin/graph/dsl/__"
 	"entgo.io/ent/entc/integration/gremlin/ent/spec"
 )
 
@@ -134,11 +134,12 @@ func (sc *SpecCreate) gremlinSave(ctx context.Context) (*Spec, error) {
 }
 
 func (sc *SpecCreate) gremlin() *dsl.Traversal {
-	v := g.AddV(spec.Label)
+	v := dsl.NewTraversalBuilder()
+	v.AddV(spec.Label)
 	for _, id := range sc.mutation.CardIDs() {
-		v.AddE(spec.CardLabel).To(g.V(id)).OutV()
+		v.AddE(spec.CardLabel).To(__.V(id)).OutV()
 	}
-	return v.ValueMap(true)
+	return v.BuildG().ValueMap(true)
 }
 
 // SpecCreateBulk is the builder for creating many Spec entities in bulk.

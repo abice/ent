@@ -178,31 +178,41 @@ func (nc *NodeCreate) gremlin() *dsl.Traversal {
 		test *dsl.Traversal // test matches and its constant.
 	}
 	constraints := make([]*constraint, 0, 2)
-	v := g.AddV(node.Label)
+	v := dsl.NewTraversalBuilder()
+	v.AddV(node.Label)
 	if value, ok := nc.mutation.Value(); ok {
 		v.Property(dsl.Single, node.FieldValue, value)
 	}
 	for _, id := range nc.mutation.PrevIDs() {
-		v.AddE(node.NextLabel).From(g.V(id)).InV()
+		v.AddE(node.NextLabel).From(__.V(id)).InV()
+		tr := g.V(id)
+		if len(constraints) > 0 {
+			tr = __.V(id)
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.E().HasLabel(node.NextLabel).OutV().HasID(id).Count(),
+			pred: tr.OutE(node.NextLabel).Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueEdge(node.Label, node.NextLabel, id)),
 		})
 	}
 	for _, id := range nc.mutation.NextIDs() {
-		v.AddE(node.NextLabel).To(g.V(id)).OutV()
+		v.AddE(node.NextLabel).To(__.V(id)).OutV()
+		tr := g.V(id)
+		if len(constraints) > 0 {
+			tr = __.V(id)
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.E().HasLabel(node.NextLabel).InV().HasID(id).Count(),
+			pred: tr.InE(node.NextLabel).Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueEdge(node.Label, node.NextLabel, id)),
 		})
 	}
 	if len(constraints) == 0 {
-		return v.ValueMap(true)
+		return v.BuildG().ValueMap(true)
 	}
-	tr := constraints[0].pred.Coalesce(constraints[0].test, v.ValueMap(true))
+	tr := v.BuildAnonymous().ValueMap(true)
 	for _, cr := range constraints[1:] {
 		tr = cr.pred.Coalesce(cr.test, tr)
 	}
+	tr = constraints[0].pred.Coalesce(constraints[0].test, tr)
 	return tr
 }
 

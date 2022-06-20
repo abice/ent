@@ -138,8 +138,8 @@ type Order string
 
 // Order options.
 const (
-	Incr    Order = "incr"
-	Decr    Order = "decr"
+	Incr    Order = "asc"
+	Decr    Order = "desc"
 	Shuffle Order = "shuffle"
 )
 

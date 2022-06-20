@@ -178,7 +178,8 @@ func (gic *GroupInfoCreate) gremlin() *dsl.Traversal {
 		test *dsl.Traversal // test matches and its constant.
 	}
 	constraints := make([]*constraint, 0, 1)
-	v := g.AddV(groupinfo.Label)
+	v := dsl.NewTraversalBuilder()
+	v.AddV(groupinfo.Label)
 	if value, ok := gic.mutation.Desc(); ok {
 		v.Property(dsl.Single, groupinfo.FieldDesc, value)
 	}
@@ -186,19 +187,24 @@ func (gic *GroupInfoCreate) gremlin() *dsl.Traversal {
 		v.Property(dsl.Single, groupinfo.FieldMaxUsers, value)
 	}
 	for _, id := range gic.mutation.GroupsIDs() {
-		v.AddE(group.InfoLabel).From(g.V(id)).InV()
+		v.AddE(group.InfoLabel).From(__.V(id)).InV()
+		tr := g.V(id)
+		if len(constraints) > 0 {
+			tr = __.V(id)
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.E().HasLabel(group.InfoLabel).OutV().HasID(id).Count(),
+			pred: tr.OutE(group.InfoLabel).Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueEdge(groupinfo.Label, group.InfoLabel, id)),
 		})
 	}
 	if len(constraints) == 0 {
-		return v.ValueMap(true)
+		return v.BuildG().ValueMap(true)
 	}
-	tr := constraints[0].pred.Coalesce(constraints[0].test, v.ValueMap(true))
+	tr := v.BuildAnonymous().ValueMap(true)
 	for _, cr := range constraints[1:] {
 		tr = cr.pred.Coalesce(cr.test, tr)
 	}
+	tr = constraints[0].pred.Coalesce(constraints[0].test, tr)
 	return tr
 }
 

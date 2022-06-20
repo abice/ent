@@ -102,6 +102,13 @@ func OptionalInt(v int) predicate.User {
 	})
 }
 
+// UniqueInt applies equality check predicate on the "unique_int" field. It's identical to UniqueIntEQ.
+func UniqueInt(v int) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldUniqueInt), v))
+	})
+}
+
 // Age applies equality check predicate on the "age" field. It's identical to AgeEQ.
 func Age(v int) predicate.User {
 	return predicate.User(func(s *sql.Selector) {
@@ -245,6 +252,96 @@ func OptionalIntIsNil() predicate.User {
 func OptionalIntNotNil() predicate.User {
 	return predicate.User(func(s *sql.Selector) {
 		s.Where(sql.NotNull(s.C(FieldOptionalInt)))
+	})
+}
+
+// UniqueIntEQ applies the EQ predicate on the "unique_int" field.
+func UniqueIntEQ(v int) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldUniqueInt), v))
+	})
+}
+
+// UniqueIntNEQ applies the NEQ predicate on the "unique_int" field.
+func UniqueIntNEQ(v int) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.NEQ(s.C(FieldUniqueInt), v))
+	})
+}
+
+// UniqueIntIn applies the In predicate on the "unique_int" field.
+func UniqueIntIn(vs ...int) predicate.User {
+	v := make([]interface{}, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.User(func(s *sql.Selector) {
+		// if not arguments were provided, append the FALSE constants,
+		// since we can't apply "IN ()". This will make this predicate falsy.
+		if len(v) == 0 {
+			s.Where(sql.False())
+			return
+		}
+		s.Where(sql.In(s.C(FieldUniqueInt), v...))
+	})
+}
+
+// UniqueIntNotIn applies the NotIn predicate on the "unique_int" field.
+func UniqueIntNotIn(vs ...int) predicate.User {
+	v := make([]interface{}, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.User(func(s *sql.Selector) {
+		// if not arguments were provided, append the FALSE constants,
+		// since we can't apply "IN ()". This will make this predicate falsy.
+		if len(v) == 0 {
+			s.Where(sql.False())
+			return
+		}
+		s.Where(sql.NotIn(s.C(FieldUniqueInt), v...))
+	})
+}
+
+// UniqueIntGT applies the GT predicate on the "unique_int" field.
+func UniqueIntGT(v int) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.GT(s.C(FieldUniqueInt), v))
+	})
+}
+
+// UniqueIntGTE applies the GTE predicate on the "unique_int" field.
+func UniqueIntGTE(v int) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.GTE(s.C(FieldUniqueInt), v))
+	})
+}
+
+// UniqueIntLT applies the LT predicate on the "unique_int" field.
+func UniqueIntLT(v int) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.LT(s.C(FieldUniqueInt), v))
+	})
+}
+
+// UniqueIntLTE applies the LTE predicate on the "unique_int" field.
+func UniqueIntLTE(v int) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.LTE(s.C(FieldUniqueInt), v))
+	})
+}
+
+// UniqueIntIsNil applies the IsNil predicate on the "unique_int" field.
+func UniqueIntIsNil() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.IsNull(s.C(FieldUniqueInt)))
+	})
+}
+
+// UniqueIntNotNil applies the NotNil predicate on the "unique_int" field.
+func UniqueIntNotNil() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		s.Where(sql.NotNull(s.C(FieldUniqueInt)))
 	})
 }
 

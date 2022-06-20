@@ -91,6 +91,13 @@ func OptionalInt(v int) predicate.User {
 	})
 }
 
+// UniqueInt applies equality check predicate on the "unique_int" field. It's identical to UniqueIntEQ.
+func UniqueInt(v int) predicate.User {
+	return predicate.User(func(t *dsl.Traversal) {
+		t.Has(Label, FieldUniqueInt, p.EQ(v))
+	})
+}
+
 // Age applies equality check predicate on the "age" field. It's identical to AgeEQ.
 func Age(v int) predicate.User {
 	return predicate.User(func(t *dsl.Traversal) {
@@ -222,6 +229,84 @@ func OptionalIntIsNil() predicate.User {
 func OptionalIntNotNil() predicate.User {
 	return predicate.User(func(t *dsl.Traversal) {
 		t.HasLabel(Label).Has(FieldOptionalInt)
+	})
+}
+
+// UniqueIntEQ applies the EQ predicate on the "unique_int" field.
+func UniqueIntEQ(v int) predicate.User {
+	return predicate.User(func(t *dsl.Traversal) {
+		t.Has(Label, FieldUniqueInt, p.EQ(v))
+	})
+}
+
+// UniqueIntNEQ applies the NEQ predicate on the "unique_int" field.
+func UniqueIntNEQ(v int) predicate.User {
+	return predicate.User(func(t *dsl.Traversal) {
+		t.Has(Label, FieldUniqueInt, p.NEQ(v))
+	})
+}
+
+// UniqueIntIn applies the In predicate on the "unique_int" field.
+func UniqueIntIn(vs ...int) predicate.User {
+	v := make([]interface{}, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.User(func(t *dsl.Traversal) {
+		t.Has(Label, FieldUniqueInt, p.Within(v...))
+	})
+}
+
+// UniqueIntNotIn applies the NotIn predicate on the "unique_int" field.
+func UniqueIntNotIn(vs ...int) predicate.User {
+	v := make([]interface{}, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.User(func(t *dsl.Traversal) {
+		t.Has(Label, FieldUniqueInt, p.Without(v...))
+	})
+}
+
+// UniqueIntGT applies the GT predicate on the "unique_int" field.
+func UniqueIntGT(v int) predicate.User {
+	return predicate.User(func(t *dsl.Traversal) {
+		t.Has(Label, FieldUniqueInt, p.GT(v))
+	})
+}
+
+// UniqueIntGTE applies the GTE predicate on the "unique_int" field.
+func UniqueIntGTE(v int) predicate.User {
+	return predicate.User(func(t *dsl.Traversal) {
+		t.Has(Label, FieldUniqueInt, p.GTE(v))
+	})
+}
+
+// UniqueIntLT applies the LT predicate on the "unique_int" field.
+func UniqueIntLT(v int) predicate.User {
+	return predicate.User(func(t *dsl.Traversal) {
+		t.Has(Label, FieldUniqueInt, p.LT(v))
+	})
+}
+
+// UniqueIntLTE applies the LTE predicate on the "unique_int" field.
+func UniqueIntLTE(v int) predicate.User {
+	return predicate.User(func(t *dsl.Traversal) {
+		t.Has(Label, FieldUniqueInt, p.LTE(v))
+	})
+}
+
+// UniqueIntIsNil applies the IsNil predicate on the "unique_int" field.
+func UniqueIntIsNil() predicate.User {
+	return predicate.User(func(t *dsl.Traversal) {
+		t.HasLabel(Label).HasNot(FieldUniqueInt)
+	})
+}
+
+// UniqueIntNotNil applies the NotNil predicate on the "unique_int" field.
+func UniqueIntNotNil() predicate.User {
+	return predicate.User(func(t *dsl.Traversal) {
+		t.HasLabel(Label).Has(FieldUniqueInt)
 	})
 }
 

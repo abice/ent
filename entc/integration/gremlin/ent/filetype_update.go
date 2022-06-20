@@ -201,9 +201,10 @@ func (ftu *FileTypeUpdate) gremlin() *dsl.Traversal {
 		test *dsl.Traversal // test matches and its constant.
 	}
 	constraints := make([]*constraint, 0, 2)
-	v := g.V().HasLabel(filetype.Label)
+	v := dsl.NewTraversalBuilder()
+	v.V().HasLabel(filetype.Label)
 	for _, p := range ftu.mutation.predicates {
-		p(v)
+		p(v.AsTraversal())
 	}
 	var (
 		rv = v.Clone()
@@ -212,8 +213,12 @@ func (ftu *FileTypeUpdate) gremlin() *dsl.Traversal {
 		trs []*dsl.Traversal
 	)
 	if value, ok := ftu.mutation.Name(); ok {
+		tr := g.V()
+		if len(constraints) > 0 {
+			tr = __.V()
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.V().Has(filetype.Label, filetype.FieldName, value).Count(),
+			pred: tr.Has(filetype.Label, filetype.FieldName, value).Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueField(filetype.Label, filetype.FieldName, value)),
 		})
 		v.Property(dsl.Single, filetype.FieldName, value)
@@ -225,28 +230,34 @@ func (ftu *FileTypeUpdate) gremlin() *dsl.Traversal {
 		v.Property(dsl.Single, filetype.FieldState, value)
 	}
 	for _, id := range ftu.mutation.RemovedFilesIDs() {
-		tr := rv.Clone().OutE(filetype.FilesLabel).Where(__.OtherV().HasID(id)).Drop().Iterate()
+		tr := rv.Clone().BuildG().OutE(filetype.FilesLabel).Where(__.OtherV().HasID(id)).Drop().Iterate()
 		trs = append(trs, tr)
 	}
 	for _, id := range ftu.mutation.FilesIDs() {
-		v.AddE(filetype.FilesLabel).To(g.V(id)).OutV()
+		v.AddE(filetype.FilesLabel).To(__.V(id)).OutV()
+		tr := g.V(id).InE(filetype.FilesLabel)
+		if len(constraints) > 0 {
+			tr = __.V(id).InE(filetype.FilesLabel)
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.E().HasLabel(filetype.FilesLabel).InV().HasID(id).Count(),
+			pred: tr.Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueEdge(filetype.Label, filetype.FilesLabel, id)),
 		})
 	}
 	v.Count()
+	tr := v.BuildG()
 	if len(constraints) > 0 {
+		tr = v.BuildAnonymous()
 		constraints = append(constraints, &constraint{
-			pred: rv.Count(),
+			pred: rv.BuildAnonymous().Count(),
 			test: __.Is(p.GT(1)).Constant(&ConstraintError{msg: "update traversal contains more than one vertex"}),
 		})
-		v = constraints[0].pred.Coalesce(constraints[0].test, v)
 		for _, cr := range constraints[1:] {
-			v = cr.pred.Coalesce(cr.test, v)
+			tr = cr.pred.Coalesce(cr.test, tr)
 		}
+		tr = constraints[0].pred.Coalesce(constraints[0].test, tr)
 	}
-	trs = append(trs, v)
+	trs = append(trs, tr)
 	return dsl.Join(trs...)
 }
 
@@ -447,7 +458,8 @@ func (ftuo *FileTypeUpdateOne) gremlin(id string) *dsl.Traversal {
 		test *dsl.Traversal // test matches and its constant.
 	}
 	constraints := make([]*constraint, 0, 2)
-	v := g.V(id)
+	v := dsl.NewTraversalBuilder()
+	v.V(id)
 	var (
 		rv = v.Clone()
 		_  = rv
@@ -455,8 +467,12 @@ func (ftuo *FileTypeUpdateOne) gremlin(id string) *dsl.Traversal {
 		trs []*dsl.Traversal
 	)
 	if value, ok := ftuo.mutation.Name(); ok {
+		tr := g.V()
+		if len(constraints) > 0 {
+			tr = __.V()
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.V().Has(filetype.Label, filetype.FieldName, value).Count(),
+			pred: tr.Has(filetype.Label, filetype.FieldName, value).Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueField(filetype.Label, filetype.FieldName, value)),
 		})
 		v.Property(dsl.Single, filetype.FieldName, value)
@@ -468,13 +484,17 @@ func (ftuo *FileTypeUpdateOne) gremlin(id string) *dsl.Traversal {
 		v.Property(dsl.Single, filetype.FieldState, value)
 	}
 	for _, id := range ftuo.mutation.RemovedFilesIDs() {
-		tr := rv.Clone().OutE(filetype.FilesLabel).Where(__.OtherV().HasID(id)).Drop().Iterate()
+		tr := rv.Clone().BuildG().OutE(filetype.FilesLabel).Where(__.OtherV().HasID(id)).Drop().Iterate()
 		trs = append(trs, tr)
 	}
 	for _, id := range ftuo.mutation.FilesIDs() {
-		v.AddE(filetype.FilesLabel).To(g.V(id)).OutV()
+		v.AddE(filetype.FilesLabel).To(__.V(id)).OutV()
+		tr := g.V(id).InE(filetype.FilesLabel)
+		if len(constraints) > 0 {
+			tr = __.V(id).InE(filetype.FilesLabel)
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.E().HasLabel(filetype.FilesLabel).InV().HasID(id).Count(),
+			pred: tr.Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueEdge(filetype.Label, filetype.FilesLabel, id)),
 		})
 	}
@@ -488,12 +508,14 @@ func (ftuo *FileTypeUpdateOne) gremlin(id string) *dsl.Traversal {
 	} else {
 		v.ValueMap(true)
 	}
+	tr := v.BuildG()
 	if len(constraints) > 0 {
-		v = constraints[0].pred.Coalesce(constraints[0].test, v)
+		tr = v.BuildAnonymous()
 		for _, cr := range constraints[1:] {
-			v = cr.pred.Coalesce(cr.test, v)
+			tr = cr.pred.Coalesce(cr.test, tr)
 		}
+		tr = constraints[0].pred.Coalesce(constraints[0].test, tr)
 	}
-	trs = append(trs, v)
+	trs = append(trs, tr)
 	return dsl.Join(trs...)
 }

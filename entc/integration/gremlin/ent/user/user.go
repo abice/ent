@@ -17,6 +17,8 @@ const (
 	FieldID = "id"
 	// FieldOptionalInt holds the string denoting the optional_int field in the database.
 	FieldOptionalInt = "optional_int"
+	// FieldUniqueInt holds the string denoting the unique_int field in the database.
+	FieldUniqueInt = "unique_int"
 	// FieldAge holds the string denoting the age field in the database.
 	FieldAge = "age"
 	// FieldName holds the string denoting the name field in the database.
@@ -86,6 +88,8 @@ const (
 var (
 	// OptionalIntValidator is a validator for the "optional_int" field. It is called by the builders before save.
 	OptionalIntValidator func(int) error
+	// UniqueIntValidator is a validator for the "unique_int" field. It is called by the builders before save.
+	UniqueIntValidator func(int) error
 	// DefaultLast holds the default value on creation for the "last" field.
 	DefaultLast string
 	// DefaultAddress holds the default value on creation for the "address" field.

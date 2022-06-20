@@ -230,7 +230,8 @@ func (pc *PetCreate) gremlin() *dsl.Traversal {
 		test *dsl.Traversal // test matches and its constant.
 	}
 	constraints := make([]*constraint, 0, 1)
-	v := g.AddV(pet.Label)
+	v := dsl.NewTraversalBuilder()
+	v.AddV(pet.Label)
 	if value, ok := pc.mutation.Age(); ok {
 		v.Property(dsl.Single, pet.FieldAge, value)
 	}
@@ -244,22 +245,27 @@ func (pc *PetCreate) gremlin() *dsl.Traversal {
 		v.Property(dsl.Single, pet.FieldNickname, value)
 	}
 	for _, id := range pc.mutation.TeamIDs() {
-		v.AddE(user.TeamLabel).From(g.V(id)).InV()
+		v.AddE(user.TeamLabel).From(__.V(id)).InV()
+		tr := g.V(id)
+		if len(constraints) > 0 {
+			tr = __.V(id)
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.E().HasLabel(user.TeamLabel).OutV().HasID(id).Count(),
+			pred: tr.OutE(user.TeamLabel).Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueEdge(pet.Label, user.TeamLabel, id)),
 		})
 	}
 	for _, id := range pc.mutation.OwnerIDs() {
-		v.AddE(user.PetsLabel).From(g.V(id)).InV()
+		v.AddE(user.PetsLabel).From(__.V(id)).InV()
 	}
 	if len(constraints) == 0 {
-		return v.ValueMap(true)
+		return v.BuildG().ValueMap(true)
 	}
-	tr := constraints[0].pred.Coalesce(constraints[0].test, v.ValueMap(true))
+	tr := v.BuildAnonymous().ValueMap(true)
 	for _, cr := range constraints[1:] {
 		tr = cr.pred.Coalesce(cr.test, tr)
 	}
+	tr = constraints[0].pred.Coalesce(constraints[0].test, tr)
 	return tr
 }
 

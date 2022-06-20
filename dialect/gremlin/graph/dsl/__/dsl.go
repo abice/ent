@@ -39,6 +39,9 @@ func OutE(args ...interface{}) *dsl.Traversal { return New().OutE(args...) }
 // InE is the api for calling __.InE().
 func InE(args ...interface{}) *dsl.Traversal { return New().InE(args...) }
 
+// BothE is the api for calling __.BothE().
+func BothE(args ...interface{}) *dsl.Traversal { return New().BothE(args...) }
+
 // InV is the api for calling __.InV().
 func InV(args ...interface{}) *dsl.Traversal { return New().InV(args...) }
 

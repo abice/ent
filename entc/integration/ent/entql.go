@@ -307,6 +307,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 		Type: "User",
 		Fields: map[string]*sqlgraph.FieldSpec{
 			user.FieldOptionalInt: {Type: field.TypeInt, Column: user.FieldOptionalInt},
+			user.FieldUniqueInt:   {Type: field.TypeInt, Column: user.FieldUniqueInt},
 			user.FieldAge:         {Type: field.TypeInt, Column: user.FieldAge},
 			user.FieldName:        {Type: field.TypeString, Column: user.FieldName},
 			user.FieldLast:        {Type: field.TypeString, Column: user.FieldLast},
@@ -1919,6 +1920,11 @@ func (f *UserFilter) WhereID(p entql.IntP) {
 // WhereOptionalInt applies the entql int predicate on the optional_int field.
 func (f *UserFilter) WhereOptionalInt(p entql.IntP) {
 	f.Where(p.Field(user.FieldOptionalInt))
+}
+
+// WhereUniqueInt applies the entql int predicate on the unique_int field.
+func (f *UserFilter) WhereUniqueInt(p entql.IntP) {
+	f.Where(p.Field(user.FieldUniqueInt))
 }
 
 // WhereAge applies the entql int predicate on the age field.

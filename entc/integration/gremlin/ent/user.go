@@ -23,6 +23,8 @@ type User struct {
 	ID string `json:"id,omitempty"`
 	// OptionalInt holds the value of the "optional_int" field.
 	OptionalInt int `json:"optional_int,omitempty"`
+	// UniqueInt holds the value of the "unique_int" field.
+	UniqueInt int `json:"unique_int,omitempty"`
 	// Age holds the value of the "age" field.
 	Age int `json:"age,omitempty"`
 	// Name holds the value of the "name" field.
@@ -205,6 +207,7 @@ func (u *User) FromResponse(res *gremlin.Response) error {
 	var scanu struct {
 		ID          string          `json:"id,omitempty"`
 		OptionalInt int             `json:"optional_int,omitempty"`
+		UniqueInt   int             `json:"unique_int,omitempty"`
 		Age         int             `json:"age,omitempty"`
 		Name        string          `json:"name,omitempty"`
 		Last        string          `json:"last,omitempty"`
@@ -221,6 +224,7 @@ func (u *User) FromResponse(res *gremlin.Response) error {
 	}
 	u.ID = scanu.ID
 	u.OptionalInt = scanu.OptionalInt
+	u.UniqueInt = scanu.UniqueInt
 	u.Age = scanu.Age
 	u.Name = scanu.Name
 	u.Last = scanu.Last
@@ -315,6 +319,9 @@ func (u *User) String() string {
 	builder.WriteString("optional_int=")
 	builder.WriteString(fmt.Sprintf("%v", u.OptionalInt))
 	builder.WriteString(", ")
+	builder.WriteString("unique_int=")
+	builder.WriteString(fmt.Sprintf("%v", u.UniqueInt))
+	builder.WriteString(", ")
 	builder.WriteString("age=")
 	builder.WriteString(fmt.Sprintf("%v", u.Age))
 	builder.WriteString(", ")
@@ -359,6 +366,7 @@ func (u *Users) FromResponse(res *gremlin.Response) error {
 	var scanu []struct {
 		ID          string          `json:"id,omitempty"`
 		OptionalInt int             `json:"optional_int,omitempty"`
+		UniqueInt   int             `json:"unique_int,omitempty"`
 		Age         int             `json:"age,omitempty"`
 		Name        string          `json:"name,omitempty"`
 		Last        string          `json:"last,omitempty"`
@@ -377,6 +385,7 @@ func (u *Users) FromResponse(res *gremlin.Response) error {
 		*u = append(*u, &User{
 			ID:          v.ID,
 			OptionalInt: v.OptionalInt,
+			UniqueInt:   v.UniqueInt,
 			Age:         v.Age,
 			Name:        v.Name,
 			Last:        v.Last,

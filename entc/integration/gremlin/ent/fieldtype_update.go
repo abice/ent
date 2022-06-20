@@ -18,7 +18,6 @@ import (
 	"entgo.io/ent/dialect/gremlin"
 	"entgo.io/ent/dialect/gremlin/graph/dsl"
 	"entgo.io/ent/dialect/gremlin/graph/dsl/__"
-	"entgo.io/ent/dialect/gremlin/graph/dsl/g"
 	"entgo.io/ent/entc/integration/ent/role"
 	"entgo.io/ent/entc/integration/ent/schema"
 	"entgo.io/ent/entc/integration/gremlin/ent/fieldtype"
@@ -1481,9 +1480,10 @@ func (ftu *FieldTypeUpdate) gremlinSave(ctx context.Context) (int, error) {
 }
 
 func (ftu *FieldTypeUpdate) gremlin() *dsl.Traversal {
-	v := g.V().HasLabel(fieldtype.Label)
+	v := dsl.NewTraversalBuilder()
+	v.V().HasLabel(fieldtype.Label)
 	for _, p := range ftu.mutation.predicates {
-		p(v)
+		p(v.AsTraversal())
 	}
 	var (
 		trs []*dsl.Traversal
@@ -1946,7 +1946,8 @@ func (ftu *FieldTypeUpdate) gremlin() *dsl.Traversal {
 		v.SideEffect(__.Properties(properties...).Drop())
 	}
 	v.Count()
-	trs = append(trs, v)
+	tr := v.BuildG()
+	trs = append(trs, tr)
 	return dsl.Join(trs...)
 }
 
@@ -3421,7 +3422,8 @@ func (ftuo *FieldTypeUpdateOne) gremlinSave(ctx context.Context) (*FieldType, er
 }
 
 func (ftuo *FieldTypeUpdateOne) gremlin(id string) *dsl.Traversal {
-	v := g.V(id)
+	v := dsl.NewTraversalBuilder()
+	v.V(id)
 	var (
 		trs []*dsl.Traversal
 	)
@@ -3892,6 +3894,7 @@ func (ftuo *FieldTypeUpdateOne) gremlin(id string) *dsl.Traversal {
 	} else {
 		v.ValueMap(true)
 	}
-	trs = append(trs, v)
+	tr := v.BuildG()
+	trs = append(trs, tr)
 	return dsl.Join(trs...)
 }

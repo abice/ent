@@ -52,13 +52,14 @@ func ({{ $receiver }} *{{ $builder }}) gremlin({{ if $one }}id {{ $.ID.Type }}{{
 		constraints := make([]*constraint, 0, {{ . }})
 	{{- end }}
 	{{- /* case of update specific vertex */}}
+	v := dsl.NewTraversalBuilder()
 	{{- if $one }}
-		v := g.V(id)
+		v.V(id)
 	{{- /* general update for N vertices */}}
 	{{- else }}
-		v := g.V().HasLabel({{ $.Package }}.Label)
+		v.V().HasLabel({{ $.Package }}.Label)
 		for _, p := range {{ $mutation }}.predicates {
-			p(v)
+			p(v.AsTraversal())
 		}
 	{{- end }}
 	var (
@@ -72,8 +73,12 @@ func ({{ $receiver }} *{{ $builder }}) gremlin({{ if $one }}id {{ $.ID.Type }}{{
 		{{- if or (not $f.Immutable) $f.UpdateDefault }}
 			if value, ok := {{ $mutation }}.{{ $f.MutationGet }}(); ok {
 				{{- if $f.Unique }}
+					tr := g.V()
+					if len(constraints) > 0{
+						tr = __.V()
+					}
 					constraints = append(constraints, &constraint{
-						pred: g.V().Has({{ $.Package }}.Label, {{ $.Package }}.{{ $f.Constant }}, value).Count(),
+						pred: tr.Has({{ $.Package }}.Label, {{ $.Package }}.{{ $f.Constant }}, value).Count(),
 						test: __.Is(p.NEQ(0)).Constant(NewErrUniqueField({{ $.Package }}.Label, {{ $.Package }}.{{ $f.Constant }}, value)),
 					})
 				{{- end }}
@@ -82,11 +87,15 @@ func ({{ $receiver }} *{{ $builder }}) gremlin({{ if $one }}id {{ $.ID.Type }}{{
 			{{- if $f.SupportsMutationAdd }}
 				if value, ok := {{ $mutation }}.Added{{ $f.StructField }}(); ok {
 					{{- if $f.Unique }}
-						addValue := rv.Clone().Union(__.Values({{ $.Package }}.{{ $f.Constant }}), __.Constant(value)).Sum().Next()
+						addValue := rv.Clone().BuildG().Union(__.Values({{ $.Package }}.{{ $f.Constant }}), __.Constant(value)).Sum().Next()
+						tr := g.V()
+						if len(constraints) > 0{
+							tr = __.V()
+						}
 						constraints = append(constraints, &constraint{
-							pred: g.V().Has({{ $.Package }}.Label, {{ $.Package }}.{{ $f.Constant }}, addValue).Count(),
-							test: __.Is(p.NEQ(0)).Constant(NewErrUniqueField({{ $.Package }}.Label, {{ $.Package }}.{{ $f.Constant }}, fmt.Sprintf("+= %v", value))),
-						})
+								pred: tr.Has({{ $.Package }}.Label, {{ $.Package }}.{{ $f.Constant }}, addValue).Count(),
+								test: __.Is(p.NEQ(0)).Constant(NewErrUniqueField({{ $.Package }}.Label, {{ $.Package }}.{{ $f.Constant }}, fmt.Sprintf("+= %v", value))),
+							})
 					{{- end }}
 					v.Property(dsl.Single, {{ $.Package }}.{{ $f.Constant }}, __.Union(__.Values({{ $.Package }}.{{ $f.Constant }}), __.Constant(value)).Sum())
 				}
@@ -121,34 +130,46 @@ func ({{ $receiver }} *{{ $builder }}) gremlin({{ if $one }}id {{ $.ID.Type }}{{
 		for _, id := range {{ $mutation }}.Removed{{ $e.StructField }}IDs() {
 		{{- end }}
 		{{- if $e.Bidi }}
-			tr := rv.Clone().BothE({{ $name }}){{ if not $e.Unique }}.Where(__.Or(__.InV().HasID(id), __.OutV().HasID(id))){{ end }}.Drop().Iterate()
+			tr := rv.Clone().BuildG().BothE({{ $name }}){{ if not $e.Unique }}.Where(__.Or(__.InV().HasID(id), __.OutV().HasID(id))){{ end }}.Drop().Iterate()
 		{{- else if $e.IsInverse }}
-			tr := rv.Clone().InE({{ $name }}){{ if not $e.Unique }}.Where(__.OtherV().HasID(id)){{ end }}.Drop().Iterate()
+			tr := rv.Clone().BuildG().InE({{ $name }}){{ if not $e.Unique }}.Where(__.OtherV().HasID(id)){{ end }}.Drop().Iterate()
 		{{- else }}
-			tr := rv.Clone().OutE({{ $name }}){{ if not $e.Unique }}.Where(__.OtherV().HasID(id)){{ end }}.Drop().Iterate()
+			tr := rv.Clone().BuildG().OutE({{ $name }}){{ if not $e.Unique }}.Where(__.OtherV().HasID(id)){{ end }}.Drop().Iterate()
 		{{- end }}
 			trs = append(trs, tr)
 		}
 		{{- /* update edges */}}
 		for _, id := range {{ $mutation }}.{{ $e.StructField }}IDs() {
 		{{- if $e.IsInverse }}
-			v.AddE({{ $name }}).From(g.V(id)).InV()
+			v.AddE({{ $name }}).From(__.V(id)).InV()
 		{{- else }}
-			v.AddE({{ $name }}).To(g.V(id)).OutV()
+			v.AddE({{ $name }}).To(__.V(id)).OutV()
 		{{- end }}
 		{{- if $e.HasConstraint }}
 			{{- if $e.Bidi }}
+				var predTr *dsl.Traversal
+				if len(constraints) > 0 {
+					predTr = rv.Clone().BuildAnonymous()
+				}else{
+					predTr = rv.Clone().BuildG()
+				}
 				constraints = append(constraints, &constraint{
-					pred: rv.Clone().Both({{ $name }}).Count(),
+					pred: predTr.Both({{ $name }}).Count(),
 					test: __.Is(p.NEQ(0)).Constant(NewErrUniqueEdge({{ $.Package }}.Label, {{ $name }}, id)),
 				})
+				{{/* We just appended a constraint, so we don't need a check on this one. */}}
+				tr := __.V(id)
 				constraints = append(constraints, &constraint{
-					pred: g.E().HasLabel({{ $name }}).Where(__.Or(__.InV().HasID(id), __.OutV().HasID(id))).Count(),
+					pred: tr.BothE({{ $name }}).Count(),
 					test: __.Is(p.NEQ(0)).Constant(NewErrUniqueEdge({{ $.Package }}.Label, {{ $name }}, id)),
 				})
 			{{- else }}
+				tr := g.V(id).{{ $direction }}E({{ $name }})
+				if len(constraints) > 0 {
+					tr = __.V(id).{{ $direction }}E({{ $name }})
+				}
 				constraints = append(constraints, &constraint{
-					pred: g.E().HasLabel({{ $name }}).{{ $direction }}V().HasID(id).Count(),
+					pred: tr.Count(),
 					test: __.Is(p.NEQ(0)).Constant(NewErrUniqueEdge({{ $.Package }}.Label, {{ $name }}, id)),
 				})
 			{{- end }}
@@ -169,22 +190,24 @@ func ({{ $receiver }} *{{ $builder }}) gremlin({{ if $one }}id {{ $.ID.Type }}{{
 	{{- else }}
 		v.Count()
 	{{- end }}
+	tr := v.BuildG()
 	{{- with .NumConstraint }}
 		if len(constraints) > 0 {
+			tr = v.BuildAnonymous()
 			{{- /* make sure the traversal does not contain more than one vertex if we have constraint */}}
 			{{- if not $one }}
 				constraints = append(constraints, &constraint{
-					pred: rv.Count(),
+					pred: rv.BuildAnonymous().Count(),
 					test: __.Is(p.GT(1)).Constant(&ConstraintError{msg: "update traversal contains more than one vertex"}),
 				})
 			{{- end }}
-			v = constraints[0].pred.Coalesce(constraints[0].test, v)
 			for _, cr := range constraints[1:] {
-				v = cr.pred.Coalesce(cr.test, v)
+				tr = cr.pred.Coalesce(cr.test, tr)
 			}
+			tr = constraints[0].pred.Coalesce(constraints[0].test, tr)
 		}
 	{{- end }}
-	trs = append(trs, v)
+	trs = append(trs, tr)
 	return dsl.Join(trs...)
 }
 {{ end }}

@@ -14,7 +14,6 @@ import (
 	"entgo.io/ent/dialect/gremlin"
 	"entgo.io/ent/dialect/gremlin/graph/dsl"
 	"entgo.io/ent/dialect/gremlin/graph/dsl/__"
-	"entgo.io/ent/dialect/gremlin/graph/dsl/g"
 	"entgo.io/ent/entc/integration/ent/schema/task"
 	"entgo.io/ent/entc/integration/gremlin/ent/predicate"
 
@@ -143,9 +142,10 @@ func (tu *TaskUpdate) gremlinSave(ctx context.Context) (int, error) {
 }
 
 func (tu *TaskUpdate) gremlin() *dsl.Traversal {
-	v := g.V().HasLabel(enttask.Label)
+	v := dsl.NewTraversalBuilder()
+	v.V().HasLabel(enttask.Label)
 	for _, p := range tu.mutation.predicates {
-		p(v)
+		p(v.AsTraversal())
 	}
 	var (
 		trs []*dsl.Traversal
@@ -157,7 +157,8 @@ func (tu *TaskUpdate) gremlin() *dsl.Traversal {
 		v.Property(dsl.Single, enttask.FieldPriority, __.Union(__.Values(enttask.FieldPriority), __.Constant(value)).Sum())
 	}
 	v.Count()
-	trs = append(trs, v)
+	tr := v.BuildG()
+	trs = append(trs, tr)
 	return dsl.Join(trs...)
 }
 
@@ -299,7 +300,8 @@ func (tuo *TaskUpdateOne) gremlinSave(ctx context.Context) (*Task, error) {
 }
 
 func (tuo *TaskUpdateOne) gremlin(id string) *dsl.Traversal {
-	v := g.V(id)
+	v := dsl.NewTraversalBuilder()
+	v.V(id)
 	var (
 		trs []*dsl.Traversal
 	)
@@ -319,6 +321,7 @@ func (tuo *TaskUpdateOne) gremlin(id string) *dsl.Traversal {
 	} else {
 		v.ValueMap(true)
 	}
-	trs = append(trs, v)
+	tr := v.BuildG()
+	trs = append(trs, tr)
 	return dsl.Join(trs...)
 }

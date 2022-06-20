@@ -173,17 +173,26 @@ func (cc *CommentCreate) gremlin() *dsl.Traversal {
 		test *dsl.Traversal // test matches and its constant.
 	}
 	constraints := make([]*constraint, 0, 2)
-	v := g.AddV(comment.Label)
+	v := dsl.NewTraversalBuilder()
+	v.AddV(comment.Label)
 	if value, ok := cc.mutation.UniqueInt(); ok {
+		tr := g.V()
+		if len(constraints) > 0 {
+			tr = __.V()
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.V().Has(comment.Label, comment.FieldUniqueInt, value).Count(),
+			pred: tr.Has(comment.Label, comment.FieldUniqueInt, value).Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueField(comment.Label, comment.FieldUniqueInt, value)),
 		})
 		v.Property(dsl.Single, comment.FieldUniqueInt, value)
 	}
 	if value, ok := cc.mutation.UniqueFloat(); ok {
+		tr := g.V()
+		if len(constraints) > 0 {
+			tr = __.V()
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.V().Has(comment.Label, comment.FieldUniqueFloat, value).Count(),
+			pred: tr.Has(comment.Label, comment.FieldUniqueFloat, value).Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueField(comment.Label, comment.FieldUniqueFloat, value)),
 		})
 		v.Property(dsl.Single, comment.FieldUniqueFloat, value)
@@ -195,12 +204,13 @@ func (cc *CommentCreate) gremlin() *dsl.Traversal {
 		v.Property(dsl.Single, comment.FieldTable, value)
 	}
 	if len(constraints) == 0 {
-		return v.ValueMap(true)
+		return v.BuildG().ValueMap(true)
 	}
-	tr := constraints[0].pred.Coalesce(constraints[0].test, v.ValueMap(true))
+	tr := v.BuildAnonymous().ValueMap(true)
 	for _, cr := range constraints[1:] {
 		tr = cr.pred.Coalesce(cr.test, tr)
 	}
+	tr = constraints[0].pred.Coalesce(constraints[0].test, tr)
 	return tr
 }
 

@@ -265,7 +265,8 @@ func (cc *CardCreate) gremlin() *dsl.Traversal {
 		test *dsl.Traversal // test matches and its constant.
 	}
 	constraints := make([]*constraint, 0, 1)
-	v := g.AddV(card.Label)
+	v := dsl.NewTraversalBuilder()
+	v.AddV(card.Label)
 	if value, ok := cc.mutation.CreateTime(); ok {
 		v.Property(dsl.Single, card.FieldCreateTime, value)
 	}
@@ -282,22 +283,27 @@ func (cc *CardCreate) gremlin() *dsl.Traversal {
 		v.Property(dsl.Single, card.FieldName, value)
 	}
 	for _, id := range cc.mutation.OwnerIDs() {
-		v.AddE(user.CardLabel).From(g.V(id)).InV()
+		v.AddE(user.CardLabel).From(__.V(id)).InV()
+		tr := g.V(id)
+		if len(constraints) > 0 {
+			tr = __.V(id)
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.E().HasLabel(user.CardLabel).OutV().HasID(id).Count(),
+			pred: tr.OutE(user.CardLabel).Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueEdge(card.Label, user.CardLabel, id)),
 		})
 	}
 	for _, id := range cc.mutation.SpecIDs() {
-		v.AddE(spec.CardLabel).From(g.V(id)).InV()
+		v.AddE(spec.CardLabel).From(__.V(id)).InV()
 	}
 	if len(constraints) == 0 {
-		return v.ValueMap(true)
+		return v.BuildG().ValueMap(true)
 	}
-	tr := constraints[0].pred.Coalesce(constraints[0].test, v.ValueMap(true))
+	tr := v.BuildAnonymous().ValueMap(true)
 	for _, cr := range constraints[1:] {
 		tr = cr.pred.Coalesce(cr.test, tr)
 	}
+	tr = constraints[0].pred.Coalesce(constraints[0].test, tr)
 	return tr
 }
 

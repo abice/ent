@@ -12,7 +12,6 @@ import (
 
 	"entgo.io/ent/dialect/gremlin"
 	"entgo.io/ent/dialect/gremlin/graph/dsl"
-	"entgo.io/ent/dialect/gremlin/graph/dsl/g"
 	"entgo.io/ent/entc/integration/gremlin/ent/goods"
 )
 
@@ -119,8 +118,9 @@ func (gc *GoodsCreate) gremlinSave(ctx context.Context) (*Goods, error) {
 }
 
 func (gc *GoodsCreate) gremlin() *dsl.Traversal {
-	v := g.AddV(goods.Label)
-	return v.ValueMap(true)
+	v := dsl.NewTraversalBuilder()
+	v.AddV(goods.Label)
+	return v.BuildG().ValueMap(true)
 }
 
 // GoodsCreateBulk is the builder for creating many Goods entities in bulk.

@@ -19,7 +19,7 @@ go test .
 In order to run the Gremlin tests, run:
 
 ```
-docker-compose up -d gremlin
+docker-compose up -d gremlin gremlin352
 go test ./gremlin/...
 ```
 

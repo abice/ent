@@ -13,7 +13,6 @@ import (
 
 	"entgo.io/ent/dialect/gremlin"
 	"entgo.io/ent/dialect/gremlin/graph/dsl"
-	"entgo.io/ent/dialect/gremlin/graph/dsl/g"
 	"entgo.io/ent/entc/integration/gremlin/ent/goods"
 	"entgo.io/ent/entc/integration/gremlin/ent/predicate"
 )
@@ -103,15 +102,17 @@ func (gu *GoodsUpdate) gremlinSave(ctx context.Context) (int, error) {
 }
 
 func (gu *GoodsUpdate) gremlin() *dsl.Traversal {
-	v := g.V().HasLabel(goods.Label)
+	v := dsl.NewTraversalBuilder()
+	v.V().HasLabel(goods.Label)
 	for _, p := range gu.mutation.predicates {
-		p(v)
+		p(v.AsTraversal())
 	}
 	var (
 		trs []*dsl.Traversal
 	)
 	v.Count()
-	trs = append(trs, v)
+	tr := v.BuildG()
+	trs = append(trs, tr)
 	return dsl.Join(trs...)
 }
 
@@ -216,7 +217,8 @@ func (guo *GoodsUpdateOne) gremlinSave(ctx context.Context) (*Goods, error) {
 }
 
 func (guo *GoodsUpdateOne) gremlin(id string) *dsl.Traversal {
-	v := g.V(id)
+	v := dsl.NewTraversalBuilder()
+	v.V(id)
 	var (
 		trs []*dsl.Traversal
 	)
@@ -230,6 +232,7 @@ func (guo *GoodsUpdateOne) gremlin(id string) *dsl.Traversal {
 	} else {
 		v.ValueMap(true)
 	}
-	trs = append(trs, v)
+	tr := v.BuildG()
+	trs = append(trs, tr)
 	return dsl.Join(trs...)
 }

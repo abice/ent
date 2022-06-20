@@ -40,6 +40,20 @@ func (uc *UserCreate) SetNillableOptionalInt(i *int) *UserCreate {
 	return uc
 }
 
+// SetUniqueInt sets the "unique_int" field.
+func (uc *UserCreate) SetUniqueInt(i int) *UserCreate {
+	uc.mutation.SetUniqueInt(i)
+	return uc
+}
+
+// SetNillableUniqueInt sets the "unique_int" field if the given value is not nil.
+func (uc *UserCreate) SetNillableUniqueInt(i *int) *UserCreate {
+	if i != nil {
+		uc.SetUniqueInt(*i)
+	}
+	return uc
+}
+
 // SetAge sets the "age" field.
 func (uc *UserCreate) SetAge(i int) *UserCreate {
 	uc.mutation.SetAge(i)
@@ -447,6 +461,11 @@ func (uc *UserCreate) check() error {
 			return &ValidationError{Name: "optional_int", err: fmt.Errorf(`ent: validator failed for field "User.optional_int": %w`, err)}
 		}
 	}
+	if v, ok := uc.mutation.UniqueInt(); ok {
+		if err := user.UniqueIntValidator(v); err != nil {
+			return &ValidationError{Name: "unique_int", err: fmt.Errorf(`ent: validator failed for field "User.unique_int": %w`, err)}
+		}
+	}
 	if _, ok := uc.mutation.Age(); !ok {
 		return &ValidationError{Name: "age", err: errors.New(`ent: missing required field "User.age"`)}
 	}
@@ -496,10 +515,22 @@ func (uc *UserCreate) gremlin() *dsl.Traversal {
 		pred *dsl.Traversal // constraint predicate.
 		test *dsl.Traversal // test matches and its constant.
 	}
-	constraints := make([]*constraint, 0, 8)
-	v := g.AddV(user.Label)
+	constraints := make([]*constraint, 0, 9)
+	v := dsl.NewTraversalBuilder()
+	v.AddV(user.Label)
 	if value, ok := uc.mutation.OptionalInt(); ok {
 		v.Property(dsl.Single, user.FieldOptionalInt, value)
+	}
+	if value, ok := uc.mutation.UniqueInt(); ok {
+		tr := g.V()
+		if len(constraints) > 0 {
+			tr = __.V()
+		}
+		constraints = append(constraints, &constraint{
+			pred: tr.Has(user.Label, user.FieldUniqueInt, value).Count(),
+			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueField(user.Label, user.FieldUniqueInt, value)),
+		})
+		v.Property(dsl.Single, user.FieldUniqueInt, value)
 	}
 	if value, ok := uc.mutation.Age(); ok {
 		v.Property(dsl.Single, user.FieldAge, value)
@@ -511,8 +542,12 @@ func (uc *UserCreate) gremlin() *dsl.Traversal {
 		v.Property(dsl.Single, user.FieldLast, value)
 	}
 	if value, ok := uc.mutation.Nickname(); ok {
+		tr := g.V()
+		if len(constraints) > 0 {
+			tr = __.V()
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.V().Has(user.Label, user.FieldNickname, value).Count(),
+			pred: tr.Has(user.Label, user.FieldNickname, value).Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueField(user.Label, user.FieldNickname, value)),
 		})
 		v.Property(dsl.Single, user.FieldNickname, value)
@@ -521,8 +556,12 @@ func (uc *UserCreate) gremlin() *dsl.Traversal {
 		v.Property(dsl.Single, user.FieldAddress, value)
 	}
 	if value, ok := uc.mutation.Phone(); ok {
+		tr := g.V()
+		if len(constraints) > 0 {
+			tr = __.V()
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.V().Has(user.Label, user.FieldPhone, value).Count(),
+			pred: tr.Has(user.Label, user.FieldPhone, value).Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueField(user.Label, user.FieldPhone, value)),
 		})
 		v.Property(dsl.Single, user.FieldPhone, value)
@@ -540,69 +579,94 @@ func (uc *UserCreate) gremlin() *dsl.Traversal {
 		v.Property(dsl.Single, user.FieldSSOCert, value)
 	}
 	for _, id := range uc.mutation.CardIDs() {
-		v.AddE(user.CardLabel).To(g.V(id)).OutV()
+		v.AddE(user.CardLabel).To(__.V(id)).OutV()
+		tr := g.V(id)
+		if len(constraints) > 0 {
+			tr = __.V(id)
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.E().HasLabel(user.CardLabel).InV().HasID(id).Count(),
+			pred: tr.InE(user.CardLabel).Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueEdge(user.Label, user.CardLabel, id)),
 		})
 	}
 	for _, id := range uc.mutation.PetsIDs() {
-		v.AddE(user.PetsLabel).To(g.V(id)).OutV()
+		v.AddE(user.PetsLabel).To(__.V(id)).OutV()
+		tr := g.V(id)
+		if len(constraints) > 0 {
+			tr = __.V(id)
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.E().HasLabel(user.PetsLabel).InV().HasID(id).Count(),
+			pred: tr.InE(user.PetsLabel).Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueEdge(user.Label, user.PetsLabel, id)),
 		})
 	}
 	for _, id := range uc.mutation.FilesIDs() {
-		v.AddE(user.FilesLabel).To(g.V(id)).OutV()
+		v.AddE(user.FilesLabel).To(__.V(id)).OutV()
+		tr := g.V(id)
+		if len(constraints) > 0 {
+			tr = __.V(id)
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.E().HasLabel(user.FilesLabel).InV().HasID(id).Count(),
+			pred: tr.InE(user.FilesLabel).Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueEdge(user.Label, user.FilesLabel, id)),
 		})
 	}
 	for _, id := range uc.mutation.GroupsIDs() {
-		v.AddE(user.GroupsLabel).To(g.V(id)).OutV()
+		v.AddE(user.GroupsLabel).To(__.V(id)).OutV()
 	}
 	for _, id := range uc.mutation.FriendsIDs() {
-		v.AddE(user.FriendsLabel).To(g.V(id)).OutV()
+		v.AddE(user.FriendsLabel).To(__.V(id)).OutV()
 	}
 	for _, id := range uc.mutation.FollowersIDs() {
-		v.AddE(user.FollowingLabel).From(g.V(id)).InV()
+		v.AddE(user.FollowingLabel).From(__.V(id)).InV()
 	}
 	for _, id := range uc.mutation.FollowingIDs() {
-		v.AddE(user.FollowingLabel).To(g.V(id)).OutV()
+		v.AddE(user.FollowingLabel).To(__.V(id)).OutV()
 	}
 	for _, id := range uc.mutation.TeamIDs() {
-		v.AddE(user.TeamLabel).To(g.V(id)).OutV()
+		v.AddE(user.TeamLabel).To(__.V(id)).OutV()
+		tr := g.V(id)
+		if len(constraints) > 0 {
+			tr = __.V(id)
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.E().HasLabel(user.TeamLabel).InV().HasID(id).Count(),
+			pred: tr.InE(user.TeamLabel).Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueEdge(user.Label, user.TeamLabel, id)),
 		})
 	}
 	for _, id := range uc.mutation.SpouseIDs() {
-		v.AddE(user.SpouseLabel).To(g.V(id)).OutV()
+		v.AddE(user.SpouseLabel).To(__.V(id)).OutV()
+		tr := g.V(id)
+		if len(constraints) > 0 {
+			tr = __.V(id)
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.E().HasLabel(user.SpouseLabel).InV().HasID(id).Count(),
+			pred: tr.InE(user.SpouseLabel).Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueEdge(user.Label, user.SpouseLabel, id)),
 		})
 	}
 	for _, id := range uc.mutation.ChildrenIDs() {
-		v.AddE(user.ParentLabel).From(g.V(id)).InV()
+		v.AddE(user.ParentLabel).From(__.V(id)).InV()
+		tr := g.V(id)
+		if len(constraints) > 0 {
+			tr = __.V(id)
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.E().HasLabel(user.ParentLabel).OutV().HasID(id).Count(),
+			pred: tr.OutE(user.ParentLabel).Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueEdge(user.Label, user.ParentLabel, id)),
 		})
 	}
 	for _, id := range uc.mutation.ParentIDs() {
-		v.AddE(user.ParentLabel).To(g.V(id)).OutV()
+		v.AddE(user.ParentLabel).To(__.V(id)).OutV()
 	}
 	if len(constraints) == 0 {
-		return v.ValueMap(true)
+		return v.BuildG().ValueMap(true)
 	}
-	tr := constraints[0].pred.Coalesce(constraints[0].test, v.ValueMap(true))
+	tr := v.BuildAnonymous().ValueMap(true)
 	for _, cr := range constraints[1:] {
 		tr = cr.pred.Coalesce(cr.test, tr)
 	}
+	tr = constraints[0].pred.Coalesce(constraints[0].test, tr)
 	return tr
 }
 

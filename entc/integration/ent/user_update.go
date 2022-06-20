@@ -62,6 +62,33 @@ func (uu *UserUpdate) ClearOptionalInt() *UserUpdate {
 	return uu
 }
 
+// SetUniqueInt sets the "unique_int" field.
+func (uu *UserUpdate) SetUniqueInt(i int) *UserUpdate {
+	uu.mutation.ResetUniqueInt()
+	uu.mutation.SetUniqueInt(i)
+	return uu
+}
+
+// SetNillableUniqueInt sets the "unique_int" field if the given value is not nil.
+func (uu *UserUpdate) SetNillableUniqueInt(i *int) *UserUpdate {
+	if i != nil {
+		uu.SetUniqueInt(*i)
+	}
+	return uu
+}
+
+// AddUniqueInt adds i to the "unique_int" field.
+func (uu *UserUpdate) AddUniqueInt(i int) *UserUpdate {
+	uu.mutation.AddUniqueInt(i)
+	return uu
+}
+
+// ClearUniqueInt clears the value of the "unique_int" field.
+func (uu *UserUpdate) ClearUniqueInt() *UserUpdate {
+	uu.mutation.ClearUniqueInt()
+	return uu
+}
+
 // SetAge sets the "age" field.
 func (uu *UserUpdate) SetAge(i int) *UserUpdate {
 	uu.mutation.ResetAge()
@@ -647,6 +674,11 @@ func (uu *UserUpdate) check() error {
 			return &ValidationError{Name: "optional_int", err: fmt.Errorf(`ent: validator failed for field "User.optional_int": %w`, err)}
 		}
 	}
+	if v, ok := uu.mutation.UniqueInt(); ok {
+		if err := user.UniqueIntValidator(v); err != nil {
+			return &ValidationError{Name: "unique_int", err: fmt.Errorf(`ent: validator failed for field "User.unique_int": %w`, err)}
+		}
+	}
 	if v, ok := uu.mutation.Role(); ok {
 		if err := user.RoleValidator(v); err != nil {
 			return &ValidationError{Name: "role", err: fmt.Errorf(`ent: validator failed for field "User.role": %w`, err)}
@@ -696,6 +728,26 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
 			Type:   field.TypeInt,
 			Column: user.FieldOptionalInt,
+		})
+	}
+	if value, ok := uu.mutation.UniqueInt(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeInt,
+			Value:  value,
+			Column: user.FieldUniqueInt,
+		})
+	}
+	if value, ok := uu.mutation.AddedUniqueInt(); ok {
+		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
+			Type:   field.TypeInt,
+			Value:  value,
+			Column: user.FieldUniqueInt,
+		})
+	}
+	if uu.mutation.UniqueIntCleared() {
+		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
+			Type:   field.TypeInt,
+			Column: user.FieldUniqueInt,
 		})
 	}
 	if value, ok := uu.mutation.Age(); ok {
@@ -1369,6 +1421,33 @@ func (uuo *UserUpdateOne) ClearOptionalInt() *UserUpdateOne {
 	return uuo
 }
 
+// SetUniqueInt sets the "unique_int" field.
+func (uuo *UserUpdateOne) SetUniqueInt(i int) *UserUpdateOne {
+	uuo.mutation.ResetUniqueInt()
+	uuo.mutation.SetUniqueInt(i)
+	return uuo
+}
+
+// SetNillableUniqueInt sets the "unique_int" field if the given value is not nil.
+func (uuo *UserUpdateOne) SetNillableUniqueInt(i *int) *UserUpdateOne {
+	if i != nil {
+		uuo.SetUniqueInt(*i)
+	}
+	return uuo
+}
+
+// AddUniqueInt adds i to the "unique_int" field.
+func (uuo *UserUpdateOne) AddUniqueInt(i int) *UserUpdateOne {
+	uuo.mutation.AddUniqueInt(i)
+	return uuo
+}
+
+// ClearUniqueInt clears the value of the "unique_int" field.
+func (uuo *UserUpdateOne) ClearUniqueInt() *UserUpdateOne {
+	uuo.mutation.ClearUniqueInt()
+	return uuo
+}
+
 // SetAge sets the "age" field.
 func (uuo *UserUpdateOne) SetAge(i int) *UserUpdateOne {
 	uuo.mutation.ResetAge()
@@ -1967,6 +2046,11 @@ func (uuo *UserUpdateOne) check() error {
 			return &ValidationError{Name: "optional_int", err: fmt.Errorf(`ent: validator failed for field "User.optional_int": %w`, err)}
 		}
 	}
+	if v, ok := uuo.mutation.UniqueInt(); ok {
+		if err := user.UniqueIntValidator(v); err != nil {
+			return &ValidationError{Name: "unique_int", err: fmt.Errorf(`ent: validator failed for field "User.unique_int": %w`, err)}
+		}
+	}
 	if v, ok := uuo.mutation.Role(); ok {
 		if err := user.RoleValidator(v); err != nil {
 			return &ValidationError{Name: "role", err: fmt.Errorf(`ent: validator failed for field "User.role": %w`, err)}
@@ -2033,6 +2117,26 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
 			Type:   field.TypeInt,
 			Column: user.FieldOptionalInt,
+		})
+	}
+	if value, ok := uuo.mutation.UniqueInt(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeInt,
+			Value:  value,
+			Column: user.FieldUniqueInt,
+		})
+	}
+	if value, ok := uuo.mutation.AddedUniqueInt(); ok {
+		_spec.Fields.Add = append(_spec.Fields.Add, &sqlgraph.FieldSpec{
+			Type:   field.TypeInt,
+			Value:  value,
+			Column: user.FieldUniqueInt,
+		})
+	}
+	if uuo.mutation.UniqueIntCleared() {
+		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
+			Type:   field.TypeInt,
+			Column: user.FieldUniqueInt,
 		})
 	}
 	if value, ok := uuo.mutation.Age(); ok {

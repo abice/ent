@@ -23,6 +23,8 @@ type User struct {
 	ID int `json:"id,omitempty"`
 	// OptionalInt holds the value of the "optional_int" field.
 	OptionalInt int `json:"optional_int,omitempty"`
+	// UniqueInt holds the value of the "unique_int" field.
+	UniqueInt int `json:"unique_int,omitempty"`
 	// Age holds the value of the "age" field.
 	Age int `json:"age,omitempty"`
 	// Name holds the value of the "name" field.
@@ -204,7 +206,7 @@ func (*User) scanValues(columns []string) ([]interface{}, error) {
 	values := make([]interface{}, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case user.FieldID, user.FieldOptionalInt, user.FieldAge:
+		case user.FieldID, user.FieldOptionalInt, user.FieldUniqueInt, user.FieldAge:
 			values[i] = new(sql.NullInt64)
 		case user.FieldName, user.FieldLast, user.FieldNickname, user.FieldAddress, user.FieldPhone, user.FieldPassword, user.FieldRole, user.FieldEmployment, user.FieldSSOCert:
 			values[i] = new(sql.NullString)
@@ -240,6 +242,12 @@ func (u *User) assignValues(columns []string, values []interface{}) error {
 				return fmt.Errorf("unexpected type %T for field optional_int", values[i])
 			} else if value.Valid {
 				u.OptionalInt = int(value.Int64)
+			}
+		case user.FieldUniqueInt:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field unique_int", values[i])
+			} else if value.Valid {
+				u.UniqueInt = int(value.Int64)
 			}
 		case user.FieldAge:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -407,6 +415,9 @@ func (u *User) String() string {
 	builder.WriteString(fmt.Sprintf("id=%v, ", u.ID))
 	builder.WriteString("optional_int=")
 	builder.WriteString(fmt.Sprintf("%v", u.OptionalInt))
+	builder.WriteString(", ")
+	builder.WriteString("unique_int=")
+	builder.WriteString(fmt.Sprintf("%v", u.UniqueInt))
 	builder.WriteString(", ")
 	builder.WriteString("age=")
 	builder.WriteString(fmt.Sprintf("%v", u.Age))

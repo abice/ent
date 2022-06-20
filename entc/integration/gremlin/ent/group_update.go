@@ -339,9 +339,10 @@ func (gu *GroupUpdate) gremlin() *dsl.Traversal {
 		test *dsl.Traversal // test matches and its constant.
 	}
 	constraints := make([]*constraint, 0, 2)
-	v := g.V().HasLabel(group.Label)
+	v := dsl.NewTraversalBuilder()
+	v.V().HasLabel(group.Label)
 	for _, p := range gu.mutation.predicates {
-		p(v)
+		p(v.AsTraversal())
 	}
 	var (
 		rv = v.Clone()
@@ -378,53 +379,63 @@ func (gu *GroupUpdate) gremlin() *dsl.Traversal {
 		v.SideEffect(__.Properties(properties...).Drop())
 	}
 	for _, id := range gu.mutation.RemovedFilesIDs() {
-		tr := rv.Clone().OutE(group.FilesLabel).Where(__.OtherV().HasID(id)).Drop().Iterate()
+		tr := rv.Clone().BuildG().OutE(group.FilesLabel).Where(__.OtherV().HasID(id)).Drop().Iterate()
 		trs = append(trs, tr)
 	}
 	for _, id := range gu.mutation.FilesIDs() {
-		v.AddE(group.FilesLabel).To(g.V(id)).OutV()
+		v.AddE(group.FilesLabel).To(__.V(id)).OutV()
+		tr := g.V(id).InE(group.FilesLabel)
+		if len(constraints) > 0 {
+			tr = __.V(id).InE(group.FilesLabel)
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.E().HasLabel(group.FilesLabel).InV().HasID(id).Count(),
+			pred: tr.Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueEdge(group.Label, group.FilesLabel, id)),
 		})
 	}
 	for _, id := range gu.mutation.RemovedBlockedIDs() {
-		tr := rv.Clone().OutE(group.BlockedLabel).Where(__.OtherV().HasID(id)).Drop().Iterate()
+		tr := rv.Clone().BuildG().OutE(group.BlockedLabel).Where(__.OtherV().HasID(id)).Drop().Iterate()
 		trs = append(trs, tr)
 	}
 	for _, id := range gu.mutation.BlockedIDs() {
-		v.AddE(group.BlockedLabel).To(g.V(id)).OutV()
+		v.AddE(group.BlockedLabel).To(__.V(id)).OutV()
+		tr := g.V(id).InE(group.BlockedLabel)
+		if len(constraints) > 0 {
+			tr = __.V(id).InE(group.BlockedLabel)
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.E().HasLabel(group.BlockedLabel).InV().HasID(id).Count(),
+			pred: tr.Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueEdge(group.Label, group.BlockedLabel, id)),
 		})
 	}
 	for _, id := range gu.mutation.RemovedUsersIDs() {
-		tr := rv.Clone().InE(user.GroupsLabel).Where(__.OtherV().HasID(id)).Drop().Iterate()
+		tr := rv.Clone().BuildG().InE(user.GroupsLabel).Where(__.OtherV().HasID(id)).Drop().Iterate()
 		trs = append(trs, tr)
 	}
 	for _, id := range gu.mutation.UsersIDs() {
-		v.AddE(user.GroupsLabel).From(g.V(id)).InV()
+		v.AddE(user.GroupsLabel).From(__.V(id)).InV()
 	}
 	if gu.mutation.InfoCleared() {
-		tr := rv.Clone().OutE(group.InfoLabel).Drop().Iterate()
+		tr := rv.Clone().BuildG().OutE(group.InfoLabel).Drop().Iterate()
 		trs = append(trs, tr)
 	}
 	for _, id := range gu.mutation.InfoIDs() {
-		v.AddE(group.InfoLabel).To(g.V(id)).OutV()
+		v.AddE(group.InfoLabel).To(__.V(id)).OutV()
 	}
 	v.Count()
+	tr := v.BuildG()
 	if len(constraints) > 0 {
+		tr = v.BuildAnonymous()
 		constraints = append(constraints, &constraint{
-			pred: rv.Count(),
+			pred: rv.BuildAnonymous().Count(),
 			test: __.Is(p.GT(1)).Constant(&ConstraintError{msg: "update traversal contains more than one vertex"}),
 		})
-		v = constraints[0].pred.Coalesce(constraints[0].test, v)
 		for _, cr := range constraints[1:] {
-			v = cr.pred.Coalesce(cr.test, v)
+			tr = cr.pred.Coalesce(cr.test, tr)
 		}
+		tr = constraints[0].pred.Coalesce(constraints[0].test, tr)
 	}
-	trs = append(trs, v)
+	trs = append(trs, tr)
 	return dsl.Join(trs...)
 }
 
@@ -761,7 +772,8 @@ func (guo *GroupUpdateOne) gremlin(id string) *dsl.Traversal {
 		test *dsl.Traversal // test matches and its constant.
 	}
 	constraints := make([]*constraint, 0, 2)
-	v := g.V(id)
+	v := dsl.NewTraversalBuilder()
+	v.V(id)
 	var (
 		rv = v.Clone()
 		_  = rv
@@ -797,40 +809,48 @@ func (guo *GroupUpdateOne) gremlin(id string) *dsl.Traversal {
 		v.SideEffect(__.Properties(properties...).Drop())
 	}
 	for _, id := range guo.mutation.RemovedFilesIDs() {
-		tr := rv.Clone().OutE(group.FilesLabel).Where(__.OtherV().HasID(id)).Drop().Iterate()
+		tr := rv.Clone().BuildG().OutE(group.FilesLabel).Where(__.OtherV().HasID(id)).Drop().Iterate()
 		trs = append(trs, tr)
 	}
 	for _, id := range guo.mutation.FilesIDs() {
-		v.AddE(group.FilesLabel).To(g.V(id)).OutV()
+		v.AddE(group.FilesLabel).To(__.V(id)).OutV()
+		tr := g.V(id).InE(group.FilesLabel)
+		if len(constraints) > 0 {
+			tr = __.V(id).InE(group.FilesLabel)
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.E().HasLabel(group.FilesLabel).InV().HasID(id).Count(),
+			pred: tr.Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueEdge(group.Label, group.FilesLabel, id)),
 		})
 	}
 	for _, id := range guo.mutation.RemovedBlockedIDs() {
-		tr := rv.Clone().OutE(group.BlockedLabel).Where(__.OtherV().HasID(id)).Drop().Iterate()
+		tr := rv.Clone().BuildG().OutE(group.BlockedLabel).Where(__.OtherV().HasID(id)).Drop().Iterate()
 		trs = append(trs, tr)
 	}
 	for _, id := range guo.mutation.BlockedIDs() {
-		v.AddE(group.BlockedLabel).To(g.V(id)).OutV()
+		v.AddE(group.BlockedLabel).To(__.V(id)).OutV()
+		tr := g.V(id).InE(group.BlockedLabel)
+		if len(constraints) > 0 {
+			tr = __.V(id).InE(group.BlockedLabel)
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.E().HasLabel(group.BlockedLabel).InV().HasID(id).Count(),
+			pred: tr.Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueEdge(group.Label, group.BlockedLabel, id)),
 		})
 	}
 	for _, id := range guo.mutation.RemovedUsersIDs() {
-		tr := rv.Clone().InE(user.GroupsLabel).Where(__.OtherV().HasID(id)).Drop().Iterate()
+		tr := rv.Clone().BuildG().InE(user.GroupsLabel).Where(__.OtherV().HasID(id)).Drop().Iterate()
 		trs = append(trs, tr)
 	}
 	for _, id := range guo.mutation.UsersIDs() {
-		v.AddE(user.GroupsLabel).From(g.V(id)).InV()
+		v.AddE(user.GroupsLabel).From(__.V(id)).InV()
 	}
 	if guo.mutation.InfoCleared() {
-		tr := rv.Clone().OutE(group.InfoLabel).Drop().Iterate()
+		tr := rv.Clone().BuildG().OutE(group.InfoLabel).Drop().Iterate()
 		trs = append(trs, tr)
 	}
 	for _, id := range guo.mutation.InfoIDs() {
-		v.AddE(group.InfoLabel).To(g.V(id)).OutV()
+		v.AddE(group.InfoLabel).To(__.V(id)).OutV()
 	}
 	if len(guo.fields) > 0 {
 		fields := make([]interface{}, 0, len(guo.fields)+1)
@@ -842,12 +862,14 @@ func (guo *GroupUpdateOne) gremlin(id string) *dsl.Traversal {
 	} else {
 		v.ValueMap(true)
 	}
+	tr := v.BuildG()
 	if len(constraints) > 0 {
-		v = constraints[0].pred.Coalesce(constraints[0].test, v)
+		tr = v.BuildAnonymous()
 		for _, cr := range constraints[1:] {
-			v = cr.pred.Coalesce(cr.test, v)
+			tr = cr.pred.Coalesce(cr.test, tr)
 		}
+		tr = constraints[0].pred.Coalesce(constraints[0].test, tr)
 	}
-	trs = append(trs, v)
+	trs = append(trs, tr)
 	return dsl.Join(trs...)
 }

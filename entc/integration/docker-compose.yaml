@@ -134,3 +134,11 @@ services:
     restart: on-failure
     ports:
       - 8182:8182
+
+  gremlin352:
+    platform: linux/amd64
+    image: entgo/gremlin-server:3.5.2
+    build: compose/gremlin-server3.5
+    restart: on-failure
+    ports:
+      - 8183:8182

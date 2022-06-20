@@ -13,7 +13,6 @@ import (
 
 	"entgo.io/ent/dialect/gremlin"
 	"entgo.io/ent/dialect/gremlin/graph/dsl"
-	"entgo.io/ent/dialect/gremlin/graph/dsl/g"
 	"entgo.io/ent/entc/integration/ent/schema/task"
 
 	enttask "entgo.io/ent/entc/integration/gremlin/ent/task"
@@ -153,11 +152,12 @@ func (tc *TaskCreate) gremlinSave(ctx context.Context) (*Task, error) {
 }
 
 func (tc *TaskCreate) gremlin() *dsl.Traversal {
-	v := g.AddV(enttask.Label)
+	v := dsl.NewTraversalBuilder()
+	v.AddV(enttask.Label)
 	if value, ok := tc.mutation.Priority(); ok {
 		v.Property(dsl.Single, enttask.FieldPriority, value)
 	}
-	return v.ValueMap(true)
+	return v.BuildG().ValueMap(true)
 }
 
 // TaskCreateBulk is the builder for creating many Task entities in bulk.

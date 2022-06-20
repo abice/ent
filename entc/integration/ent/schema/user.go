@@ -80,5 +80,9 @@ func (UserMixin) Fields() []ent.Field {
 		field.Int("optional_int").
 			Optional().
 			Positive(),
+		field.Int("unique_int").
+			Optional().
+			Unique().
+			Positive(),
 	}
 }

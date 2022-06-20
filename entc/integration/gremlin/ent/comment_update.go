@@ -183,9 +183,10 @@ func (cu *CommentUpdate) gremlin() *dsl.Traversal {
 		test *dsl.Traversal // test matches and its constant.
 	}
 	constraints := make([]*constraint, 0, 2)
-	v := g.V().HasLabel(comment.Label)
+	v := dsl.NewTraversalBuilder()
+	v.V().HasLabel(comment.Label)
 	for _, p := range cu.mutation.predicates {
-		p(v)
+		p(v.AsTraversal())
 	}
 	var (
 		rv = v.Clone()
@@ -194,31 +195,47 @@ func (cu *CommentUpdate) gremlin() *dsl.Traversal {
 		trs []*dsl.Traversal
 	)
 	if value, ok := cu.mutation.UniqueInt(); ok {
+		tr := g.V()
+		if len(constraints) > 0 {
+			tr = __.V()
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.V().Has(comment.Label, comment.FieldUniqueInt, value).Count(),
+			pred: tr.Has(comment.Label, comment.FieldUniqueInt, value).Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueField(comment.Label, comment.FieldUniqueInt, value)),
 		})
 		v.Property(dsl.Single, comment.FieldUniqueInt, value)
 	}
 	if value, ok := cu.mutation.AddedUniqueInt(); ok {
-		addValue := rv.Clone().Union(__.Values(comment.FieldUniqueInt), __.Constant(value)).Sum().Next()
+		addValue := rv.Clone().BuildG().Union(__.Values(comment.FieldUniqueInt), __.Constant(value)).Sum().Next()
+		tr := g.V()
+		if len(constraints) > 0 {
+			tr = __.V()
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.V().Has(comment.Label, comment.FieldUniqueInt, addValue).Count(),
+			pred: tr.Has(comment.Label, comment.FieldUniqueInt, addValue).Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueField(comment.Label, comment.FieldUniqueInt, fmt.Sprintf("+= %v", value))),
 		})
 		v.Property(dsl.Single, comment.FieldUniqueInt, __.Union(__.Values(comment.FieldUniqueInt), __.Constant(value)).Sum())
 	}
 	if value, ok := cu.mutation.UniqueFloat(); ok {
+		tr := g.V()
+		if len(constraints) > 0 {
+			tr = __.V()
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.V().Has(comment.Label, comment.FieldUniqueFloat, value).Count(),
+			pred: tr.Has(comment.Label, comment.FieldUniqueFloat, value).Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueField(comment.Label, comment.FieldUniqueFloat, value)),
 		})
 		v.Property(dsl.Single, comment.FieldUniqueFloat, value)
 	}
 	if value, ok := cu.mutation.AddedUniqueFloat(); ok {
-		addValue := rv.Clone().Union(__.Values(comment.FieldUniqueFloat), __.Constant(value)).Sum().Next()
+		addValue := rv.Clone().BuildG().Union(__.Values(comment.FieldUniqueFloat), __.Constant(value)).Sum().Next()
+		tr := g.V()
+		if len(constraints) > 0 {
+			tr = __.V()
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.V().Has(comment.Label, comment.FieldUniqueFloat, addValue).Count(),
+			pred: tr.Has(comment.Label, comment.FieldUniqueFloat, addValue).Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueField(comment.Label, comment.FieldUniqueFloat, fmt.Sprintf("+= %v", value))),
 		})
 		v.Property(dsl.Single, comment.FieldUniqueFloat, __.Union(__.Values(comment.FieldUniqueFloat), __.Constant(value)).Sum())
@@ -243,17 +260,19 @@ func (cu *CommentUpdate) gremlin() *dsl.Traversal {
 		v.SideEffect(__.Properties(properties...).Drop())
 	}
 	v.Count()
+	tr := v.BuildG()
 	if len(constraints) > 0 {
+		tr = v.BuildAnonymous()
 		constraints = append(constraints, &constraint{
-			pred: rv.Count(),
+			pred: rv.BuildAnonymous().Count(),
 			test: __.Is(p.GT(1)).Constant(&ConstraintError{msg: "update traversal contains more than one vertex"}),
 		})
-		v = constraints[0].pred.Coalesce(constraints[0].test, v)
 		for _, cr := range constraints[1:] {
-			v = cr.pred.Coalesce(cr.test, v)
+			tr = cr.pred.Coalesce(cr.test, tr)
 		}
+		tr = constraints[0].pred.Coalesce(constraints[0].test, tr)
 	}
-	trs = append(trs, v)
+	trs = append(trs, tr)
 	return dsl.Join(trs...)
 }
 
@@ -436,7 +455,8 @@ func (cuo *CommentUpdateOne) gremlin(id string) *dsl.Traversal {
 		test *dsl.Traversal // test matches and its constant.
 	}
 	constraints := make([]*constraint, 0, 2)
-	v := g.V(id)
+	v := dsl.NewTraversalBuilder()
+	v.V(id)
 	var (
 		rv = v.Clone()
 		_  = rv
@@ -444,31 +464,47 @@ func (cuo *CommentUpdateOne) gremlin(id string) *dsl.Traversal {
 		trs []*dsl.Traversal
 	)
 	if value, ok := cuo.mutation.UniqueInt(); ok {
+		tr := g.V()
+		if len(constraints) > 0 {
+			tr = __.V()
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.V().Has(comment.Label, comment.FieldUniqueInt, value).Count(),
+			pred: tr.Has(comment.Label, comment.FieldUniqueInt, value).Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueField(comment.Label, comment.FieldUniqueInt, value)),
 		})
 		v.Property(dsl.Single, comment.FieldUniqueInt, value)
 	}
 	if value, ok := cuo.mutation.AddedUniqueInt(); ok {
-		addValue := rv.Clone().Union(__.Values(comment.FieldUniqueInt), __.Constant(value)).Sum().Next()
+		addValue := rv.Clone().BuildG().Union(__.Values(comment.FieldUniqueInt), __.Constant(value)).Sum().Next()
+		tr := g.V()
+		if len(constraints) > 0 {
+			tr = __.V()
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.V().Has(comment.Label, comment.FieldUniqueInt, addValue).Count(),
+			pred: tr.Has(comment.Label, comment.FieldUniqueInt, addValue).Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueField(comment.Label, comment.FieldUniqueInt, fmt.Sprintf("+= %v", value))),
 		})
 		v.Property(dsl.Single, comment.FieldUniqueInt, __.Union(__.Values(comment.FieldUniqueInt), __.Constant(value)).Sum())
 	}
 	if value, ok := cuo.mutation.UniqueFloat(); ok {
+		tr := g.V()
+		if len(constraints) > 0 {
+			tr = __.V()
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.V().Has(comment.Label, comment.FieldUniqueFloat, value).Count(),
+			pred: tr.Has(comment.Label, comment.FieldUniqueFloat, value).Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueField(comment.Label, comment.FieldUniqueFloat, value)),
 		})
 		v.Property(dsl.Single, comment.FieldUniqueFloat, value)
 	}
 	if value, ok := cuo.mutation.AddedUniqueFloat(); ok {
-		addValue := rv.Clone().Union(__.Values(comment.FieldUniqueFloat), __.Constant(value)).Sum().Next()
+		addValue := rv.Clone().BuildG().Union(__.Values(comment.FieldUniqueFloat), __.Constant(value)).Sum().Next()
+		tr := g.V()
+		if len(constraints) > 0 {
+			tr = __.V()
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.V().Has(comment.Label, comment.FieldUniqueFloat, addValue).Count(),
+			pred: tr.Has(comment.Label, comment.FieldUniqueFloat, addValue).Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueField(comment.Label, comment.FieldUniqueFloat, fmt.Sprintf("+= %v", value))),
 		})
 		v.Property(dsl.Single, comment.FieldUniqueFloat, __.Union(__.Values(comment.FieldUniqueFloat), __.Constant(value)).Sum())
@@ -502,12 +538,14 @@ func (cuo *CommentUpdateOne) gremlin(id string) *dsl.Traversal {
 	} else {
 		v.ValueMap(true)
 	}
+	tr := v.BuildG()
 	if len(constraints) > 0 {
-		v = constraints[0].pred.Coalesce(constraints[0].test, v)
+		tr = v.BuildAnonymous()
 		for _, cr := range constraints[1:] {
-			v = cr.pred.Coalesce(cr.test, v)
+			tr = cr.pred.Coalesce(cr.test, tr)
 		}
+		tr = constraints[0].pred.Coalesce(constraints[0].test, tr)
 	}
-	trs = append(trs, v)
+	trs = append(trs, tr)
 	return dsl.Join(trs...)
 }

@@ -17,7 +17,6 @@ import (
 
 	"entgo.io/ent/dialect/gremlin"
 	"entgo.io/ent/dialect/gremlin/graph/dsl"
-	"entgo.io/ent/dialect/gremlin/graph/dsl/g"
 	"entgo.io/ent/entc/integration/ent/role"
 	"entgo.io/ent/entc/integration/ent/schema"
 	"entgo.io/ent/entc/integration/gremlin/ent/fieldtype"
@@ -1009,7 +1008,8 @@ func (ftc *FieldTypeCreate) gremlinSave(ctx context.Context) (*FieldType, error)
 }
 
 func (ftc *FieldTypeCreate) gremlin() *dsl.Traversal {
-	v := g.AddV(fieldtype.Label)
+	v := dsl.NewTraversalBuilder()
+	v.AddV(fieldtype.Label)
 	if value, ok := ftc.mutation.Int(); ok {
 		v.Property(dsl.Single, fieldtype.FieldInt, value)
 	}
@@ -1205,7 +1205,7 @@ func (ftc *FieldTypeCreate) gremlin() *dsl.Traversal {
 	if value, ok := ftc.mutation.PasswordOther(); ok {
 		v.Property(dsl.Single, fieldtype.FieldPasswordOther, value)
 	}
-	return v.ValueMap(true)
+	return v.BuildG().ValueMap(true)
 }
 
 // FieldTypeCreateBulk is the builder for creating many FieldType entities in bulk.

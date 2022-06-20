@@ -14,7 +14,6 @@ import (
 	"entgo.io/ent/dialect/gremlin"
 	"entgo.io/ent/dialect/gremlin/graph/dsl"
 	"entgo.io/ent/dialect/gremlin/graph/dsl/__"
-	"entgo.io/ent/dialect/gremlin/graph/dsl/g"
 	"entgo.io/ent/entc/integration/gremlin/ent/predicate"
 	"entgo.io/ent/entc/integration/gremlin/ent/spec"
 )
@@ -140,9 +139,10 @@ func (su *SpecUpdate) gremlinSave(ctx context.Context) (int, error) {
 }
 
 func (su *SpecUpdate) gremlin() *dsl.Traversal {
-	v := g.V().HasLabel(spec.Label)
+	v := dsl.NewTraversalBuilder()
+	v.V().HasLabel(spec.Label)
 	for _, p := range su.mutation.predicates {
-		p(v)
+		p(v.AsTraversal())
 	}
 	var (
 		rv = v.Clone()
@@ -151,14 +151,15 @@ func (su *SpecUpdate) gremlin() *dsl.Traversal {
 		trs []*dsl.Traversal
 	)
 	for _, id := range su.mutation.RemovedCardIDs() {
-		tr := rv.Clone().OutE(spec.CardLabel).Where(__.OtherV().HasID(id)).Drop().Iterate()
+		tr := rv.Clone().BuildG().OutE(spec.CardLabel).Where(__.OtherV().HasID(id)).Drop().Iterate()
 		trs = append(trs, tr)
 	}
 	for _, id := range su.mutation.CardIDs() {
-		v.AddE(spec.CardLabel).To(g.V(id)).OutV()
+		v.AddE(spec.CardLabel).To(__.V(id)).OutV()
 	}
 	v.Count()
-	trs = append(trs, v)
+	tr := v.BuildG()
+	trs = append(trs, tr)
 	return dsl.Join(trs...)
 }
 
@@ -299,7 +300,8 @@ func (suo *SpecUpdateOne) gremlinSave(ctx context.Context) (*Spec, error) {
 }
 
 func (suo *SpecUpdateOne) gremlin(id string) *dsl.Traversal {
-	v := g.V(id)
+	v := dsl.NewTraversalBuilder()
+	v.V(id)
 	var (
 		rv = v.Clone()
 		_  = rv
@@ -307,11 +309,11 @@ func (suo *SpecUpdateOne) gremlin(id string) *dsl.Traversal {
 		trs []*dsl.Traversal
 	)
 	for _, id := range suo.mutation.RemovedCardIDs() {
-		tr := rv.Clone().OutE(spec.CardLabel).Where(__.OtherV().HasID(id)).Drop().Iterate()
+		tr := rv.Clone().BuildG().OutE(spec.CardLabel).Where(__.OtherV().HasID(id)).Drop().Iterate()
 		trs = append(trs, tr)
 	}
 	for _, id := range suo.mutation.CardIDs() {
-		v.AddE(spec.CardLabel).To(g.V(id)).OutV()
+		v.AddE(spec.CardLabel).To(__.V(id)).OutV()
 	}
 	if len(suo.fields) > 0 {
 		fields := make([]interface{}, 0, len(suo.fields)+1)
@@ -323,6 +325,7 @@ func (suo *SpecUpdateOne) gremlin(id string) *dsl.Traversal {
 	} else {
 		v.ValueMap(true)
 	}
-	trs = append(trs, v)
+	tr := v.BuildG()
+	trs = append(trs, tr)
 	return dsl.Join(trs...)
 }

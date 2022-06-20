@@ -246,9 +246,10 @@ func (cu *CardUpdate) gremlin() *dsl.Traversal {
 		test *dsl.Traversal // test matches and its constant.
 	}
 	constraints := make([]*constraint, 0, 1)
-	v := g.V().HasLabel(card.Label)
+	v := dsl.NewTraversalBuilder()
+	v.V().HasLabel(card.Label)
 	for _, p := range cu.mutation.predicates {
-		p(v)
+		p(v.AsTraversal())
 	}
 	var (
 		rv = v.Clone()
@@ -276,35 +277,41 @@ func (cu *CardUpdate) gremlin() *dsl.Traversal {
 		v.SideEffect(__.Properties(properties...).Drop())
 	}
 	if cu.mutation.OwnerCleared() {
-		tr := rv.Clone().InE(user.CardLabel).Drop().Iterate()
+		tr := rv.Clone().BuildG().InE(user.CardLabel).Drop().Iterate()
 		trs = append(trs, tr)
 	}
 	for _, id := range cu.mutation.OwnerIDs() {
-		v.AddE(user.CardLabel).From(g.V(id)).InV()
+		v.AddE(user.CardLabel).From(__.V(id)).InV()
+		tr := g.V(id).OutE(user.CardLabel)
+		if len(constraints) > 0 {
+			tr = __.V(id).OutE(user.CardLabel)
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.E().HasLabel(user.CardLabel).OutV().HasID(id).Count(),
+			pred: tr.Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueEdge(card.Label, user.CardLabel, id)),
 		})
 	}
 	for _, id := range cu.mutation.RemovedSpecIDs() {
-		tr := rv.Clone().InE(spec.CardLabel).Where(__.OtherV().HasID(id)).Drop().Iterate()
+		tr := rv.Clone().BuildG().InE(spec.CardLabel).Where(__.OtherV().HasID(id)).Drop().Iterate()
 		trs = append(trs, tr)
 	}
 	for _, id := range cu.mutation.SpecIDs() {
-		v.AddE(spec.CardLabel).From(g.V(id)).InV()
+		v.AddE(spec.CardLabel).From(__.V(id)).InV()
 	}
 	v.Count()
+	tr := v.BuildG()
 	if len(constraints) > 0 {
+		tr = v.BuildAnonymous()
 		constraints = append(constraints, &constraint{
-			pred: rv.Count(),
+			pred: rv.BuildAnonymous().Count(),
 			test: __.Is(p.GT(1)).Constant(&ConstraintError{msg: "update traversal contains more than one vertex"}),
 		})
-		v = constraints[0].pred.Coalesce(constraints[0].test, v)
 		for _, cr := range constraints[1:] {
-			v = cr.pred.Coalesce(cr.test, v)
+			tr = cr.pred.Coalesce(cr.test, tr)
 		}
+		tr = constraints[0].pred.Coalesce(constraints[0].test, tr)
 	}
-	trs = append(trs, v)
+	trs = append(trs, tr)
 	return dsl.Join(trs...)
 }
 
@@ -547,7 +554,8 @@ func (cuo *CardUpdateOne) gremlin(id string) *dsl.Traversal {
 		test *dsl.Traversal // test matches and its constant.
 	}
 	constraints := make([]*constraint, 0, 1)
-	v := g.V(id)
+	v := dsl.NewTraversalBuilder()
+	v.V(id)
 	var (
 		rv = v.Clone()
 		_  = rv
@@ -574,22 +582,26 @@ func (cuo *CardUpdateOne) gremlin(id string) *dsl.Traversal {
 		v.SideEffect(__.Properties(properties...).Drop())
 	}
 	if cuo.mutation.OwnerCleared() {
-		tr := rv.Clone().InE(user.CardLabel).Drop().Iterate()
+		tr := rv.Clone().BuildG().InE(user.CardLabel).Drop().Iterate()
 		trs = append(trs, tr)
 	}
 	for _, id := range cuo.mutation.OwnerIDs() {
-		v.AddE(user.CardLabel).From(g.V(id)).InV()
+		v.AddE(user.CardLabel).From(__.V(id)).InV()
+		tr := g.V(id).OutE(user.CardLabel)
+		if len(constraints) > 0 {
+			tr = __.V(id).OutE(user.CardLabel)
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.E().HasLabel(user.CardLabel).OutV().HasID(id).Count(),
+			pred: tr.Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueEdge(card.Label, user.CardLabel, id)),
 		})
 	}
 	for _, id := range cuo.mutation.RemovedSpecIDs() {
-		tr := rv.Clone().InE(spec.CardLabel).Where(__.OtherV().HasID(id)).Drop().Iterate()
+		tr := rv.Clone().BuildG().InE(spec.CardLabel).Where(__.OtherV().HasID(id)).Drop().Iterate()
 		trs = append(trs, tr)
 	}
 	for _, id := range cuo.mutation.SpecIDs() {
-		v.AddE(spec.CardLabel).From(g.V(id)).InV()
+		v.AddE(spec.CardLabel).From(__.V(id)).InV()
 	}
 	if len(cuo.fields) > 0 {
 		fields := make([]interface{}, 0, len(cuo.fields)+1)
@@ -601,12 +613,14 @@ func (cuo *CardUpdateOne) gremlin(id string) *dsl.Traversal {
 	} else {
 		v.ValueMap(true)
 	}
+	tr := v.BuildG()
 	if len(constraints) > 0 {
-		v = constraints[0].pred.Coalesce(constraints[0].test, v)
+		tr = v.BuildAnonymous()
 		for _, cr := range constraints[1:] {
-			v = cr.pred.Coalesce(cr.test, v)
+			tr = cr.pred.Coalesce(cr.test, tr)
 		}
+		tr = constraints[0].pred.Coalesce(constraints[0].test, tr)
 	}
-	trs = append(trs, v)
+	trs = append(trs, tr)
 	return dsl.Join(trs...)
 }

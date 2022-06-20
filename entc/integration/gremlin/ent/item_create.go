@@ -173,24 +173,30 @@ func (ic *ItemCreate) gremlin() *dsl.Traversal {
 		test *dsl.Traversal // test matches and its constant.
 	}
 	constraints := make([]*constraint, 0, 1)
-	v := g.AddV(item.Label)
+	v := dsl.NewTraversalBuilder()
+	v.AddV(item.Label)
 	if id, ok := ic.mutation.ID(); ok {
 		v.Property(dsl.ID, id)
 	}
 	if value, ok := ic.mutation.Text(); ok {
+		tr := g.V()
+		if len(constraints) > 0 {
+			tr = __.V()
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.V().Has(item.Label, item.FieldText, value).Count(),
+			pred: tr.Has(item.Label, item.FieldText, value).Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueField(item.Label, item.FieldText, value)),
 		})
 		v.Property(dsl.Single, item.FieldText, value)
 	}
 	if len(constraints) == 0 {
-		return v.ValueMap(true)
+		return v.BuildG().ValueMap(true)
 	}
-	tr := constraints[0].pred.Coalesce(constraints[0].test, v.ValueMap(true))
+	tr := v.BuildAnonymous().ValueMap(true)
 	for _, cr := range constraints[1:] {
 		tr = cr.pred.Coalesce(cr.test, tr)
 	}
+	tr = constraints[0].pred.Coalesce(constraints[0].test, tr)
 	return tr
 }
 

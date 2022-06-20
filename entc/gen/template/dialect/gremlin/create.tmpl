@@ -35,7 +35,8 @@ func ({{ $receiver }} *{{ $builder }}) gremlin() *dsl.Traversal {
 		}
 		constraints := make([]*constraint, 0, {{ . }})
 	{{- end }}
-	v := g.AddV({{ $.Package }}.Label)
+	v := dsl.NewTraversalBuilder()
+	v.AddV({{ $.Package }}.Label)
 	{{- if $.ID.UserDefined }}
 		if id, ok := {{ $mutation }}.{{ $.ID.MutationGet }}(); ok {
 			v.Property(dsl.ID, id)
@@ -44,8 +45,12 @@ func ({{ $receiver }} *{{ $builder }}) gremlin() *dsl.Traversal {
 	{{- range $f := $.MutationFields }}
 		if value, ok := {{ $mutation }}.{{ $f.MutationGet }}(); ok {
 			{{- if $f.Unique }}
+				tr := g.V()
+				if len(constraints) > 0{
+					tr = __.V()
+				}
 				constraints = append(constraints, &constraint{
-					pred: g.V().Has({{ $.Package }}.Label, {{ $.Package }}.{{ $f.Constant }}, value).Count(),
+					pred: tr.Has({{ $.Package }}.Label, {{ $.Package }}.{{ $f.Constant }}, value).Count(),
 					test: __.Is(p.NEQ(0)).Constant(NewErrUniqueField({{ $.Package }}.Label, {{ $.Package }}.{{ $f.Constant }}, value)),
 				})
 			{{- end }}
@@ -59,13 +64,17 @@ func ({{ $receiver }} *{{ $builder }}) gremlin() *dsl.Traversal {
 			{{- if $e.IsInverse }}
 				{{- $direction = "Out" }}
 				{{- $name = printf "%s.%s" $e.Type.Package $e.LabelConstant }}
-				v.AddE({{ $name }}).From(g.V(id)).InV()
+				v.AddE({{ $name }}).From(__.V(id)).InV()
 			{{- else }}
-				v.AddE({{ $name }}).To(g.V(id)).OutV()
+				v.AddE({{ $name }}).To(__.V(id)).OutV()
 			{{- end }}
 			{{- if $e.HasConstraint }}
+				tr := g.V(id)
+				if len(constraints) > 0{
+					tr = __.V(id)
+				}
 				constraints = append(constraints, &constraint{
-					pred: g.E().HasLabel({{ $name }}).{{ $direction }}V().HasID(id).Count(),
+					pred: tr.{{ $direction }}E({{ $name }}).Count(),
 					test: __.Is(p.NEQ(0)).Constant(NewErrUniqueEdge({{ $.Package }}.Label, {{ $name }}, id)),
 				})
 			{{- end }}
@@ -73,15 +82,16 @@ func ({{ $receiver }} *{{ $builder }}) gremlin() *dsl.Traversal {
 	{{- end }}
 	{{- with .NumConstraint }}
 		if len(constraints) == 0 {
-			return v.ValueMap(true)
+			return v.BuildG().ValueMap(true)
 		}
-		tr := constraints[0].pred.Coalesce(constraints[0].test, v.ValueMap(true))
+		tr := v.BuildAnonymous().ValueMap(true)
 		for _, cr := range constraints[1:] {
 			tr = cr.pred.Coalesce(cr.test, tr)
 		}
+		tr = constraints[0].pred.Coalesce(constraints[0].test, tr)
 		return tr
 	{{- else }}
-		return v.ValueMap(true)
+		return v.BuildG().ValueMap(true)
 	{{- end }}
 }
 {{ end }}

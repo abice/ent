@@ -243,6 +243,10 @@ func init() {
 	userDescOptionalInt := userMixinFields0[0].Descriptor()
 	// user.OptionalIntValidator is a validator for the "optional_int" field. It is called by the builders before save.
 	user.OptionalIntValidator = userDescOptionalInt.Validators[0].(func(int) error)
+	// userDescUniqueInt is the schema descriptor for unique_int field.
+	userDescUniqueInt := userMixinFields0[1].Descriptor()
+	// user.UniqueIntValidator is a validator for the "unique_int" field. It is called by the builders before save.
+	user.UniqueIntValidator = userDescUniqueInt.Validators[0].(func(int) error)
 	// userDescLast is the schema descriptor for last field.
 	userDescLast := userFields[2].Descriptor()
 	// user.DefaultLast holds the default value on creation for the last field.

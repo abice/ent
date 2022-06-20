@@ -229,9 +229,10 @@ func (pu *PetUpdate) gremlin() *dsl.Traversal {
 		test *dsl.Traversal // test matches and its constant.
 	}
 	constraints := make([]*constraint, 0, 1)
-	v := g.V().HasLabel(pet.Label)
+	v := dsl.NewTraversalBuilder()
+	v.V().HasLabel(pet.Label)
 	for _, p := range pu.mutation.predicates {
-		p(v)
+		p(v.AsTraversal())
 	}
 	var (
 		rv = v.Clone()
@@ -265,35 +266,41 @@ func (pu *PetUpdate) gremlin() *dsl.Traversal {
 		v.SideEffect(__.Properties(properties...).Drop())
 	}
 	if pu.mutation.TeamCleared() {
-		tr := rv.Clone().InE(user.TeamLabel).Drop().Iterate()
+		tr := rv.Clone().BuildG().InE(user.TeamLabel).Drop().Iterate()
 		trs = append(trs, tr)
 	}
 	for _, id := range pu.mutation.TeamIDs() {
-		v.AddE(user.TeamLabel).From(g.V(id)).InV()
+		v.AddE(user.TeamLabel).From(__.V(id)).InV()
+		tr := g.V(id).OutE(user.TeamLabel)
+		if len(constraints) > 0 {
+			tr = __.V(id).OutE(user.TeamLabel)
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.E().HasLabel(user.TeamLabel).OutV().HasID(id).Count(),
+			pred: tr.Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueEdge(pet.Label, user.TeamLabel, id)),
 		})
 	}
 	if pu.mutation.OwnerCleared() {
-		tr := rv.Clone().InE(user.PetsLabel).Drop().Iterate()
+		tr := rv.Clone().BuildG().InE(user.PetsLabel).Drop().Iterate()
 		trs = append(trs, tr)
 	}
 	for _, id := range pu.mutation.OwnerIDs() {
-		v.AddE(user.PetsLabel).From(g.V(id)).InV()
+		v.AddE(user.PetsLabel).From(__.V(id)).InV()
 	}
 	v.Count()
+	tr := v.BuildG()
 	if len(constraints) > 0 {
+		tr = v.BuildAnonymous()
 		constraints = append(constraints, &constraint{
-			pred: rv.Count(),
+			pred: rv.BuildAnonymous().Count(),
 			test: __.Is(p.GT(1)).Constant(&ConstraintError{msg: "update traversal contains more than one vertex"}),
 		})
-		v = constraints[0].pred.Coalesce(constraints[0].test, v)
 		for _, cr := range constraints[1:] {
-			v = cr.pred.Coalesce(cr.test, v)
+			tr = cr.pred.Coalesce(cr.test, tr)
 		}
+		tr = constraints[0].pred.Coalesce(constraints[0].test, tr)
 	}
-	trs = append(trs, v)
+	trs = append(trs, tr)
 	return dsl.Join(trs...)
 }
 
@@ -520,7 +527,8 @@ func (puo *PetUpdateOne) gremlin(id string) *dsl.Traversal {
 		test *dsl.Traversal // test matches and its constant.
 	}
 	constraints := make([]*constraint, 0, 1)
-	v := g.V(id)
+	v := dsl.NewTraversalBuilder()
+	v.V(id)
 	var (
 		rv = v.Clone()
 		_  = rv
@@ -553,22 +561,26 @@ func (puo *PetUpdateOne) gremlin(id string) *dsl.Traversal {
 		v.SideEffect(__.Properties(properties...).Drop())
 	}
 	if puo.mutation.TeamCleared() {
-		tr := rv.Clone().InE(user.TeamLabel).Drop().Iterate()
+		tr := rv.Clone().BuildG().InE(user.TeamLabel).Drop().Iterate()
 		trs = append(trs, tr)
 	}
 	for _, id := range puo.mutation.TeamIDs() {
-		v.AddE(user.TeamLabel).From(g.V(id)).InV()
+		v.AddE(user.TeamLabel).From(__.V(id)).InV()
+		tr := g.V(id).OutE(user.TeamLabel)
+		if len(constraints) > 0 {
+			tr = __.V(id).OutE(user.TeamLabel)
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.E().HasLabel(user.TeamLabel).OutV().HasID(id).Count(),
+			pred: tr.Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueEdge(pet.Label, user.TeamLabel, id)),
 		})
 	}
 	if puo.mutation.OwnerCleared() {
-		tr := rv.Clone().InE(user.PetsLabel).Drop().Iterate()
+		tr := rv.Clone().BuildG().InE(user.PetsLabel).Drop().Iterate()
 		trs = append(trs, tr)
 	}
 	for _, id := range puo.mutation.OwnerIDs() {
-		v.AddE(user.PetsLabel).From(g.V(id)).InV()
+		v.AddE(user.PetsLabel).From(__.V(id)).InV()
 	}
 	if len(puo.fields) > 0 {
 		fields := make([]interface{}, 0, len(puo.fields)+1)
@@ -580,12 +592,14 @@ func (puo *PetUpdateOne) gremlin(id string) *dsl.Traversal {
 	} else {
 		v.ValueMap(true)
 	}
+	tr := v.BuildG()
 	if len(constraints) > 0 {
-		v = constraints[0].pred.Coalesce(constraints[0].test, v)
+		tr = v.BuildAnonymous()
 		for _, cr := range constraints[1:] {
-			v = cr.pred.Coalesce(cr.test, v)
+			tr = cr.pred.Coalesce(cr.test, tr)
 		}
+		tr = constraints[0].pred.Coalesce(constraints[0].test, tr)
 	}
-	trs = append(trs, v)
+	trs = append(trs, tr)
 	return dsl.Join(trs...)
 }

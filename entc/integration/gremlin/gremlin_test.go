@@ -35,17 +35,25 @@ import (
 // on the tests under the `integration` directory (The code
 // is the same, the import path is different).
 func TestGremlin(t *testing.T) {
-	client, err := ent.Open("gremlin", "http://localhost:8182")
-	require.NoError(t, err)
-	defer client.Close()
-	// run all tests except transaction and index tests.
-	for _, tt := range tests[2:] {
-		name := runtime.FuncForPC(reflect.ValueOf(tt).Pointer()).Name()
-		t.Run(name[strings.LastIndex(name, ".")+1:], func(t *testing.T) {
-			drop(t, client)
-			tt(t, client)
+	for version, port := range map[string]int{
+		"3.4.11": 8182,
+		"3.5.2":  8183,
+	} {
+		t.Run(version, func(t *testing.T) {
+			client, err := ent.Open("gremlin", fmt.Sprintf("http://localhost:%d", port))
+			require.NoError(t, err)
+			defer client.Close()
+			// run all tests except transaction and index tests.
+			for _, tt := range tests[2:] {
+				name := runtime.FuncForPC(reflect.ValueOf(tt).Pointer()).Name()
+				t.Run(name[strings.LastIndex(name, ".")+1:], func(t *testing.T) {
+					drop(t, client)
+					tt(t, client)
+				})
+			}
 		})
 	}
+
 }
 
 var tests = []func(*testing.T, *ent.Client){
@@ -373,6 +381,13 @@ func AddValues(t *testing.T, client *ent.Client) {
 	cmt1 = cmt1.Update().AddUniqueInt(10).AddUniqueInt(-1).SaveX(ctx)
 	require.Equal(30, cmt1.UniqueInt)
 	require.Equal(30, client.Comment.GetX(ctx, cmt1.ID).UniqueInt)
+
+	t.Log("add values to many")
+	client.User.Create().SetName("foo").SetAddress("abcd").SetAge(30).SaveX(ctx)
+	client.User.Create().SetName("bar").SetAddress("abcd").SetAge(31).SaveX(ctx)
+
+	client.User.Update().Where(user.Name("foo")).AddUniqueInt(20).SaveX(ctx)
+
 }
 
 func Delete(t *testing.T, client *ent.Client) {

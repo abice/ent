@@ -174,9 +174,10 @@ func (giu *GroupInfoUpdate) gremlin() *dsl.Traversal {
 		test *dsl.Traversal // test matches and its constant.
 	}
 	constraints := make([]*constraint, 0, 1)
-	v := g.V().HasLabel(groupinfo.Label)
+	v := dsl.NewTraversalBuilder()
+	v.V().HasLabel(groupinfo.Label)
 	for _, p := range giu.mutation.predicates {
-		p(v)
+		p(v.AsTraversal())
 	}
 	var (
 		rv = v.Clone()
@@ -194,28 +195,34 @@ func (giu *GroupInfoUpdate) gremlin() *dsl.Traversal {
 		v.Property(dsl.Single, groupinfo.FieldMaxUsers, __.Union(__.Values(groupinfo.FieldMaxUsers), __.Constant(value)).Sum())
 	}
 	for _, id := range giu.mutation.RemovedGroupsIDs() {
-		tr := rv.Clone().InE(group.InfoLabel).Where(__.OtherV().HasID(id)).Drop().Iterate()
+		tr := rv.Clone().BuildG().InE(group.InfoLabel).Where(__.OtherV().HasID(id)).Drop().Iterate()
 		trs = append(trs, tr)
 	}
 	for _, id := range giu.mutation.GroupsIDs() {
-		v.AddE(group.InfoLabel).From(g.V(id)).InV()
+		v.AddE(group.InfoLabel).From(__.V(id)).InV()
+		tr := g.V(id).OutE(group.InfoLabel)
+		if len(constraints) > 0 {
+			tr = __.V(id).OutE(group.InfoLabel)
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.E().HasLabel(group.InfoLabel).OutV().HasID(id).Count(),
+			pred: tr.Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueEdge(groupinfo.Label, group.InfoLabel, id)),
 		})
 	}
 	v.Count()
+	tr := v.BuildG()
 	if len(constraints) > 0 {
+		tr = v.BuildAnonymous()
 		constraints = append(constraints, &constraint{
-			pred: rv.Count(),
+			pred: rv.BuildAnonymous().Count(),
 			test: __.Is(p.GT(1)).Constant(&ConstraintError{msg: "update traversal contains more than one vertex"}),
 		})
-		v = constraints[0].pred.Coalesce(constraints[0].test, v)
 		for _, cr := range constraints[1:] {
-			v = cr.pred.Coalesce(cr.test, v)
+			tr = cr.pred.Coalesce(cr.test, tr)
 		}
+		tr = constraints[0].pred.Coalesce(constraints[0].test, tr)
 	}
-	trs = append(trs, v)
+	trs = append(trs, tr)
 	return dsl.Join(trs...)
 }
 
@@ -388,7 +395,8 @@ func (giuo *GroupInfoUpdateOne) gremlin(id string) *dsl.Traversal {
 		test *dsl.Traversal // test matches and its constant.
 	}
 	constraints := make([]*constraint, 0, 1)
-	v := g.V(id)
+	v := dsl.NewTraversalBuilder()
+	v.V(id)
 	var (
 		rv = v.Clone()
 		_  = rv
@@ -405,13 +413,17 @@ func (giuo *GroupInfoUpdateOne) gremlin(id string) *dsl.Traversal {
 		v.Property(dsl.Single, groupinfo.FieldMaxUsers, __.Union(__.Values(groupinfo.FieldMaxUsers), __.Constant(value)).Sum())
 	}
 	for _, id := range giuo.mutation.RemovedGroupsIDs() {
-		tr := rv.Clone().InE(group.InfoLabel).Where(__.OtherV().HasID(id)).Drop().Iterate()
+		tr := rv.Clone().BuildG().InE(group.InfoLabel).Where(__.OtherV().HasID(id)).Drop().Iterate()
 		trs = append(trs, tr)
 	}
 	for _, id := range giuo.mutation.GroupsIDs() {
-		v.AddE(group.InfoLabel).From(g.V(id)).InV()
+		v.AddE(group.InfoLabel).From(__.V(id)).InV()
+		tr := g.V(id).OutE(group.InfoLabel)
+		if len(constraints) > 0 {
+			tr = __.V(id).OutE(group.InfoLabel)
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.E().HasLabel(group.InfoLabel).OutV().HasID(id).Count(),
+			pred: tr.Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueEdge(groupinfo.Label, group.InfoLabel, id)),
 		})
 	}
@@ -425,12 +437,14 @@ func (giuo *GroupInfoUpdateOne) gremlin(id string) *dsl.Traversal {
 	} else {
 		v.ValueMap(true)
 	}
+	tr := v.BuildG()
 	if len(constraints) > 0 {
-		v = constraints[0].pred.Coalesce(constraints[0].test, v)
+		tr = v.BuildAnonymous()
 		for _, cr := range constraints[1:] {
-			v = cr.pred.Coalesce(cr.test, v)
+			tr = cr.pred.Coalesce(cr.test, tr)
 		}
+		tr = constraints[0].pred.Coalesce(constraints[0].test, tr)
 	}
-	trs = append(trs, v)
+	trs = append(trs, tr)
 	return dsl.Join(trs...)
 }

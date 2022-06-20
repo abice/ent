@@ -187,9 +187,10 @@ func (nu *NodeUpdate) gremlin() *dsl.Traversal {
 		test *dsl.Traversal // test matches and its constant.
 	}
 	constraints := make([]*constraint, 0, 2)
-	v := g.V().HasLabel(node.Label)
+	v := dsl.NewTraversalBuilder()
+	v.V().HasLabel(node.Label)
 	for _, p := range nu.mutation.predicates {
-		p(v)
+		p(v.AsTraversal())
 	}
 	var (
 		rv = v.Clone()
@@ -211,39 +212,49 @@ func (nu *NodeUpdate) gremlin() *dsl.Traversal {
 		v.SideEffect(__.Properties(properties...).Drop())
 	}
 	if nu.mutation.PrevCleared() {
-		tr := rv.Clone().InE(node.NextLabel).Drop().Iterate()
+		tr := rv.Clone().BuildG().InE(node.NextLabel).Drop().Iterate()
 		trs = append(trs, tr)
 	}
 	for _, id := range nu.mutation.PrevIDs() {
-		v.AddE(node.NextLabel).From(g.V(id)).InV()
+		v.AddE(node.NextLabel).From(__.V(id)).InV()
+		tr := g.V(id).OutE(node.NextLabel)
+		if len(constraints) > 0 {
+			tr = __.V(id).OutE(node.NextLabel)
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.E().HasLabel(node.NextLabel).OutV().HasID(id).Count(),
+			pred: tr.Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueEdge(node.Label, node.NextLabel, id)),
 		})
 	}
 	if nu.mutation.NextCleared() {
-		tr := rv.Clone().OutE(node.NextLabel).Drop().Iterate()
+		tr := rv.Clone().BuildG().OutE(node.NextLabel).Drop().Iterate()
 		trs = append(trs, tr)
 	}
 	for _, id := range nu.mutation.NextIDs() {
-		v.AddE(node.NextLabel).To(g.V(id)).OutV()
+		v.AddE(node.NextLabel).To(__.V(id)).OutV()
+		tr := g.V(id).InE(node.NextLabel)
+		if len(constraints) > 0 {
+			tr = __.V(id).InE(node.NextLabel)
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.E().HasLabel(node.NextLabel).InV().HasID(id).Count(),
+			pred: tr.Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueEdge(node.Label, node.NextLabel, id)),
 		})
 	}
 	v.Count()
+	tr := v.BuildG()
 	if len(constraints) > 0 {
+		tr = v.BuildAnonymous()
 		constraints = append(constraints, &constraint{
-			pred: rv.Count(),
+			pred: rv.BuildAnonymous().Count(),
 			test: __.Is(p.GT(1)).Constant(&ConstraintError{msg: "update traversal contains more than one vertex"}),
 		})
-		v = constraints[0].pred.Coalesce(constraints[0].test, v)
 		for _, cr := range constraints[1:] {
-			v = cr.pred.Coalesce(cr.test, v)
+			tr = cr.pred.Coalesce(cr.test, tr)
 		}
+		tr = constraints[0].pred.Coalesce(constraints[0].test, tr)
 	}
-	trs = append(trs, v)
+	trs = append(trs, tr)
 	return dsl.Join(trs...)
 }
 
@@ -430,7 +441,8 @@ func (nuo *NodeUpdateOne) gremlin(id string) *dsl.Traversal {
 		test *dsl.Traversal // test matches and its constant.
 	}
 	constraints := make([]*constraint, 0, 2)
-	v := g.V(id)
+	v := dsl.NewTraversalBuilder()
+	v.V(id)
 	var (
 		rv = v.Clone()
 		_  = rv
@@ -451,24 +463,32 @@ func (nuo *NodeUpdateOne) gremlin(id string) *dsl.Traversal {
 		v.SideEffect(__.Properties(properties...).Drop())
 	}
 	if nuo.mutation.PrevCleared() {
-		tr := rv.Clone().InE(node.NextLabel).Drop().Iterate()
+		tr := rv.Clone().BuildG().InE(node.NextLabel).Drop().Iterate()
 		trs = append(trs, tr)
 	}
 	for _, id := range nuo.mutation.PrevIDs() {
-		v.AddE(node.NextLabel).From(g.V(id)).InV()
+		v.AddE(node.NextLabel).From(__.V(id)).InV()
+		tr := g.V(id).OutE(node.NextLabel)
+		if len(constraints) > 0 {
+			tr = __.V(id).OutE(node.NextLabel)
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.E().HasLabel(node.NextLabel).OutV().HasID(id).Count(),
+			pred: tr.Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueEdge(node.Label, node.NextLabel, id)),
 		})
 	}
 	if nuo.mutation.NextCleared() {
-		tr := rv.Clone().OutE(node.NextLabel).Drop().Iterate()
+		tr := rv.Clone().BuildG().OutE(node.NextLabel).Drop().Iterate()
 		trs = append(trs, tr)
 	}
 	for _, id := range nuo.mutation.NextIDs() {
-		v.AddE(node.NextLabel).To(g.V(id)).OutV()
+		v.AddE(node.NextLabel).To(__.V(id)).OutV()
+		tr := g.V(id).InE(node.NextLabel)
+		if len(constraints) > 0 {
+			tr = __.V(id).InE(node.NextLabel)
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.E().HasLabel(node.NextLabel).InV().HasID(id).Count(),
+			pred: tr.Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueEdge(node.Label, node.NextLabel, id)),
 		})
 	}
@@ -482,12 +502,14 @@ func (nuo *NodeUpdateOne) gremlin(id string) *dsl.Traversal {
 	} else {
 		v.ValueMap(true)
 	}
+	tr := v.BuildG()
 	if len(constraints) > 0 {
-		v = constraints[0].pred.Coalesce(constraints[0].test, v)
+		tr = v.BuildAnonymous()
 		for _, cr := range constraints[1:] {
-			v = cr.pred.Coalesce(cr.test, v)
+			tr = cr.pred.Coalesce(cr.test, tr)
 		}
+		tr = constraints[0].pred.Coalesce(constraints[0].test, tr)
 	}
-	trs = append(trs, v)
+	trs = append(trs, tr)
 	return dsl.Join(trs...)
 }

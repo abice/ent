@@ -279,7 +279,8 @@ func (gc *GroupCreate) gremlin() *dsl.Traversal {
 		test *dsl.Traversal // test matches and its constant.
 	}
 	constraints := make([]*constraint, 0, 2)
-	v := g.AddV(group.Label)
+	v := dsl.NewTraversalBuilder()
+	v.AddV(group.Label)
 	if value, ok := gc.mutation.Active(); ok {
 		v.Property(dsl.Single, group.FieldActive, value)
 	}
@@ -296,32 +297,41 @@ func (gc *GroupCreate) gremlin() *dsl.Traversal {
 		v.Property(dsl.Single, group.FieldName, value)
 	}
 	for _, id := range gc.mutation.FilesIDs() {
-		v.AddE(group.FilesLabel).To(g.V(id)).OutV()
+		v.AddE(group.FilesLabel).To(__.V(id)).OutV()
+		tr := g.V(id)
+		if len(constraints) > 0 {
+			tr = __.V(id)
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.E().HasLabel(group.FilesLabel).InV().HasID(id).Count(),
+			pred: tr.InE(group.FilesLabel).Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueEdge(group.Label, group.FilesLabel, id)),
 		})
 	}
 	for _, id := range gc.mutation.BlockedIDs() {
-		v.AddE(group.BlockedLabel).To(g.V(id)).OutV()
+		v.AddE(group.BlockedLabel).To(__.V(id)).OutV()
+		tr := g.V(id)
+		if len(constraints) > 0 {
+			tr = __.V(id)
+		}
 		constraints = append(constraints, &constraint{
-			pred: g.E().HasLabel(group.BlockedLabel).InV().HasID(id).Count(),
+			pred: tr.InE(group.BlockedLabel).Count(),
 			test: __.Is(p.NEQ(0)).Constant(NewErrUniqueEdge(group.Label, group.BlockedLabel, id)),
 		})
 	}
 	for _, id := range gc.mutation.UsersIDs() {
-		v.AddE(user.GroupsLabel).From(g.V(id)).InV()
+		v.AddE(user.GroupsLabel).From(__.V(id)).InV()
 	}
 	for _, id := range gc.mutation.InfoIDs() {
-		v.AddE(group.InfoLabel).To(g.V(id)).OutV()
+		v.AddE(group.InfoLabel).To(__.V(id)).OutV()
 	}
 	if len(constraints) == 0 {
-		return v.ValueMap(true)
+		return v.BuildG().ValueMap(true)
 	}
-	tr := constraints[0].pred.Coalesce(constraints[0].test, v.ValueMap(true))
+	tr := v.BuildAnonymous().ValueMap(true)
 	for _, cr := range constraints[1:] {
 		tr = cr.pred.Coalesce(cr.test, tr)
 	}
+	tr = constraints[0].pred.Coalesce(constraints[0].test, tr)
 	return tr
 }
 
